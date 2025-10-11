@@ -1,12 +1,12 @@
 ﻿//+------------------------------------------------------------------+
-//|                                     FibIndicators_Refactored.mq5 |
+//|                                     FibIndicators_Final.mq5 |
 //|                         Copyright 2024, MetaQuotes Software Corp. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2024, MetaQuotes Software Corp."
 #property link      "https://www.mql5.com"
-#property version   "2.0"
-#property description "Refactored Fibonacci Stochastic Indicator"
+#property version   "3.0"
+#property description "Refactored Fibonacci Stochastic Indicator with all fixes"
 
 #property indicator_separate_window
 #property indicator_buffers 38 // 19 for plotting, 19 for calculations
@@ -52,23 +52,25 @@ enum ENUM_CUSTOM_MA_METHOD
   };
 
 //--- User Inputs
-input int                   DisplayStart  = 0;       // First Fibonacci index to display
-input int                   DisplayEnd    = 18;      // Last Fibonacci index to display
-input ENUM_CALC_TYPE        CalcType      = CALC_NORMAL; // Calculation Mode
-input ENUM_SUM_TYPE         SumType       = SUM_FORWARD; // Summation Mode
-input ENUM_KD_TYPE          KDType        = KD_SIGNAL;   // Stochastic Line (%K or %D)
-input int                   Slowing       = 1;       // Stochastic Slowing
-input ENUM_CUSTOM_MA_METHOD MA_Method     = CUSTOM_SMA; // Moving Average Method
-input ENUM_STO_PRICE        Price_Field   = STO_LOWHIGH; // Stochastic Price Field
+input int                   in_display_start  = 0;       // First Fibonacci index to display
+input int                   in_display_end    = 18;      // Last Fibonacci index to display
+input ENUM_CALC_TYPE        in_calc_type      = CALC_NORMAL; // Calculation Mode
+input ENUM_SUM_TYPE         in_sum_type       = SUM_FORWARD; // Summation Mode
+input ENUM_KD_TYPE          in_kd_type        = KD_SIGNAL;   // Stochastic Line (%K or %D)
+input int                   in_slowing        = 1;       // Stochastic Slowing
+input ENUM_CUSTOM_MA_METHOD in_ma_method      = CUSTOM_SMA; // Moving Average Method
+input ENUM_STO_PRICE        in_price_field    = STO_LOWHIGH; // Stochastic Price Field
 
 //--- Global Variables
-int      Fibonacci[] = {1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765};
+int      g_fibonacci[] = {1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765};
 int      g_buff_num = 19;
+int      g_display_start;
+int      g_display_end;
 
-//--- Buffers
-double   PlotBuffers[19][];
-double   StochBuffers[19][];
-int      StochHandles[19];
+//--- Buffers (declared individually)
+double   PlotBuffer0[], PlotBuffer1[], PlotBuffer2[], PlotBuffer3[], PlotBuffer4[], PlotBuffer5[], PlotBuffer6[], PlotBuffer7[], PlotBuffer8[], PlotBuffer9[], PlotBuffer10[], PlotBuffer11[], PlotBuffer12[], PlotBuffer13[], PlotBuffer14[], PlotBuffer15[], PlotBuffer16[], PlotBuffer17[], PlotBuffer18[];
+double   StochBuffer0[], StochBuffer1[], StochBuffer2[], StochBuffer3[], StochBuffer4[], StochBuffer5[], StochBuffer6[], StochBuffer7[], StochBuffer8[], StochBuffer9[], StochBuffer10[], StochBuffer11[], StochBuffer12[], StochBuffer13[], StochBuffer14[], StochBuffer15[], StochBuffer16[], StochBuffer17[], StochBuffer18[];
+int      g_stoch_handles[19];
 
 //--- Forward Declarations
 double MA_OnArray(const double &arr[], int total, int period, ENUM_CUSTOM_MA_METHOD method, int shift);
@@ -77,32 +79,60 @@ void ZLEMA_OnArray(const double &arr[], int total, int period, double &result_ar
 void CustomStochastic(int k_period, int d_period, int slowing, ENUM_CUSTOM_MA_METHOD ma_method, const int rates_total, const double &high[], const double &low[], const double &close[], double &k_buffer[], double &d_buffer[]);
 
 //+------------------------------------------------------------------+
+//| Helper to get buffer reference                                   |
+//+------------------------------------------------------------------+
+double& GetPlotBuffer(int index)
+{
+   switch(index)
+   {
+      case 0: return PlotBuffer0; case 1: return PlotBuffer1; case 2: return PlotBuffer2; case 3: return PlotBuffer3; case 4: return PlotBuffer4;
+      case 5: return PlotBuffer5; case 6: return PlotBuffer6; case 7: return PlotBuffer7; case 8: return PlotBuffer8; case 9: return PlotBuffer9;
+      case 10: return PlotBuffer10; case 11: return PlotBuffer11; case 12: return PlotBuffer12; case 13: return PlotBuffer13; case 14: return PlotBuffer14;
+      case 15: return PlotBuffer15; case 16: return PlotBuffer16; case 17: return PlotBuffer17; case 18: return PlotBuffer18;
+   }
+   return PlotBuffer0; // Should not happen
+}
+
+double& GetStochBuffer(int index)
+{
+   switch(index)
+   {
+      case 0: return StochBuffer0; case 1: return StochBuffer1; case 2: return StochBuffer2; case 3: return StochBuffer3; case 4: return StochBuffer4;
+      case 5: return StochBuffer5; case 6: return StochBuffer6; case 7: return StochBuffer7; case 8: return StochBuffer8; case 9: return StochBuffer9;
+      case 10: return StochBuffer10; case 11: return StochBuffer11; case 12: return StochBuffer12; case 13: return StochBuffer13; case 14: return StochBuffer14;
+      case 15: return StochBuffer15; case 16: return StochBuffer16; case 17: return StochBuffer17; case 18: return StochBuffer18;
+   }
+   return StochBuffer0; // Should not happen
+}
+
+
+//+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
 //+------------------------------------------------------------------+
 int OnInit()
   {
-//--- Check user inputs
-   if(DisplayStart < 0) DisplayStart = 0;
-   if(DisplayEnd >= g_buff_num) DisplayEnd = g_buff_num - 1;
-   if(DisplayStart > DisplayEnd) DisplayStart = DisplayEnd;
+//--- Validate and copy inputs to global variables
+   g_display_start = in_display_start;
+   g_display_end = in_display_end;
+   if(g_display_start < 0) g_display_start = 0;
+   if(g_display_end >= g_buff_num) g_display_end = g_buff_num - 1;
+   if(g_display_start > g_display_end) g_display_start = g_display_end;
 
 //--- Initialize buffers
    for(int i = 0; i < g_buff_num; i++)
      {
-      // Plotting buffers
-      SetIndexBuffer(i, PlotBuffers[i], INDICATOR_DATA);
-      ArraySetAsSeries(PlotBuffers[i], true);
-      // Calculation buffers
-      SetIndexBuffer(g_buff_num + i, StochBuffers[i], INDICATOR_CALCULATIONS);
-      ArraySetAsSeries(StochBuffers[i], true);
+      SetIndexBuffer(i, GetPlotBuffer(i), INDICATOR_DATA);
+      ArraySetAsSeries(GetPlotBuffer(i), true);
+      SetIndexBuffer(g_buff_num + i, GetStochBuffer(i), INDICATOR_CALCULATIONS);
+      ArraySetAsSeries(GetStochBuffer(i), true);
      }
 
 //--- Set up plots
    for(int i = 0; i < g_buff_num; i++)
      {
-      PlotIndexSetString(i, PLOT_LABEL, "P" + (string)Fibonacci[i]);
+      PlotIndexSetString(i, PLOT_LABEL, "P" + (string)g_fibonacci[i]);
 
-      if(i < DisplayStart || i > DisplayEnd)
+      if(i < g_display_start || i > g_display_end)
         {
          PlotIndexSetInteger(i, PLOT_DRAW_TYPE, DRAW_NONE);
          continue;
@@ -115,24 +145,26 @@ int OnInit()
       color clr;
       ENUM_LINE_STYLE style;
 
+      uchar r,g,b;
       // Group 1: Short-term
       if(i <= 5)
         {
-         clr = color(int(50 + (i * 25)), int(50 + (i * 25)), 255); // Blue gradient
+         r = uchar(50 + (i * 25)); g = uchar(50 + (i * 25)); b = 255;
          style = STYLE_SOLID;
         }
       // Group 2: Mid-term
       else if(i <= 10)
         {
-         clr = color(int(50 + ((i - 6) * 30)), 255, int(200 - ((i - 6) * 30))); // Green/Yellow gradient
+         r = uchar(50 + ((i - 6) * 30)); g = 255; b = uchar(200 - ((i - 6) * 30));
          style = STYLE_DASH;
         }
       // Group 3: Long-term
       else
         {
-         clr = color(255, int(200 - ((i - 11) * 25)), int(50 + ((i - 11) * 10))); // Red/Orange gradient
+         r = 255; g = uchar(200 - ((i - 11) * 25)); b = uchar(50 + ((i - 11) * 10));
          style = STYLE_DOT;
         }
+      clr = (color) ((r << 16) | (g << 8) | b);
 
       // Emphasize P6, P7, P11
       if(i == 6 || i == 7 || i == 10) // Corresponds to Fib 21, 34, 144
@@ -148,17 +180,17 @@ int OnInit()
 //--- Initialize indicator handles for standard MAs
    for(int i = 0; i < g_buff_num; i++)
      {
-      if(MA_Method < CUSTOM_HMA)
+      if(in_ma_method < CUSTOM_HMA)
         {
-         StochHandles[i] = iStochastic(Symbol(), Period(), Fibonacci[i], Fibonacci[i], Slowing, (ENUM_MA_METHOD)MA_Method, Price_Field);
+         g_stoch_handles[i] = iStochastic(Symbol(), Period(), g_fibonacci[i], g_fibonacci[i], in_slowing, (ENUM_MA_METHOD)in_ma_method, in_price_field);
         }
       else
         {
-         StochHandles[i] = -1; // Custom calculation
+         g_stoch_handles[i] = -1; // Custom calculation
         }
      }
 
-   IndicatorSetString(INDICATOR_SHORTNAME, "FibStoch(" + (string)Slowing + ")");
+   IndicatorSetString(INDICATOR_SHORTNAME, "FibStoch(" + (string)in_slowing + ")");
    return(INIT_SUCCEEDED);
   }
 
@@ -170,9 +202,9 @@ int OnCalculate(const int rates_total,
                 const int begin,
                 const double &price[])
   {
-   //--- Get price data once if using custom MAs
+//--- Get price data once if using custom MAs
    double high[], low[], close[];
-   if(MA_Method >= CUSTOM_HMA)
+   if(in_ma_method >= CUSTOM_HMA)
      {
       if(CopyHigh(Symbol(), Period(), 0, rates_total, high) <= 0 ||
          CopyLow(Symbol(), Period(), 0, rates_total, low) <= 0 ||
@@ -183,104 +215,110 @@ int OnCalculate(const int rates_total,
       ArraySetAsSeries(close, true);
      }
 
-   //--- Fill stochastic buffers
+//--- Fill stochastic buffers
    for(int i = 0; i < g_buff_num; i++)
      {
-      if(MA_Method >= CUSTOM_HMA) // Custom MA calculation
+      if(in_ma_method >= CUSTOM_HMA) // Custom MA calculation
         {
          double k_buffer[], d_buffer[];
          ArrayResize(k_buffer, rates_total);
          ArrayResize(d_buffer, rates_total);
-         CustomStochastic(Fibonacci[i], Fibonacci[i], Slowing, MA_Method, rates_total, high, low, close, k_buffer, d_buffer);
+         CustomStochastic(g_fibonacci[i], g_fibonacci[i], in_slowing, in_ma_method, rates_total, high, low, close, k_buffer, d_buffer);
 
-         if(KDType == KD_MAIN)
-            ArrayCopy(StochBuffers[i], k_buffer);
+         if(in_kd_type == KD_MAIN)
+            ArrayCopy(GetStochBuffer(i), k_buffer);
          else
-            ArrayCopy(StochBuffers[i], d_buffer);
+            ArrayCopy(GetStochBuffer(i), d_buffer);
         }
       else // Standard MA calculation
         {
-         if(StochHandles[i] == INVALID_HANDLE) continue;
-         int line_type = (KDType == KD_MAIN) ? MAIN_LINE : SIGNAL_LINE;
-         CopyBuffer(StochHandles[i], line_type, 0, rates_total, StochBuffers[i]);
+         if(g_stoch_handles[i] == INVALID_HANDLE) continue;
+         int line_type = (in_kd_type == KD_MAIN) ? MAIN_LINE : SIGNAL_LINE;
+         CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, GetStochBuffer(i));
         }
      }
 
-   //--- Calculate plot buffers
+//--- Calculate plot buffers
    int limit = rates_total - prev_calculated - 1;
    if (prev_calculated==0) limit = rates_total - 1;
 
    for(int bar = limit; bar >= 0; bar--)
      {
-      for(int i = DisplayStart; i <= DisplayEnd; i++)
+      for(int i = g_display_start; i <= g_display_end; i++)
         {
-         double val = 0;
-         double stoch_val = StochBuffers[i][bar];
+         double stoch_val = GetStochBuffer(i)[bar];
          if(stoch_val <= 0 || stoch_val >= 100)
            {
-            PlotBuffers[i][bar] = 0;
+            GetPlotBuffer(i)[bar] = 0;
             continue;
            }
 
          // --- Select calculation type ---
-         switch(CalcType)
+         switch(in_calc_type)
            {
             case CALC_NORMAL:
-               PlotBuffers[i][bar] = stoch_val;
+              {
+               GetPlotBuffer(i)[bar] = stoch_val;
                break;
-
+              }
             case CALC_SUM:
+              {
                double sum = 0;
                double count = 0;
-               if(SumType == SUM_FORWARD)
+               if(in_sum_type == SUM_FORWARD)
                  {
-                  for(int j = i; j <= DisplayEnd; j++)
+                  for(int j = i; j <= g_display_end; j++)
                     {
-                     sum += StochBuffers[j][bar];
+                     sum += GetStochBuffer(j)[bar];
                      count++;
                     }
                  }
                else // SUM_BACKWARD
                  {
-                  for(int j = DisplayStart; j <= i; j++)
+                  for(int j = g_display_start; j <= i; j++)
                     {
-                     sum += StochBuffers[j][bar];
+                     sum += GetStochBuffer(j)[bar];
                      count++;
                     }
                  }
-               PlotBuffers[i][bar] = (count > 0) ? sum / count : 0;
+               GetPlotBuffer(i)[bar] = (count > 0) ? sum / count : 0;
                break;
-
+              }
             case CALC_DIV:
+              {
                if(bar > 0)
-                  PlotBuffers[i][bar] = stoch_val - StochBuffers[i][bar + 1];
+                  GetPlotBuffer(i)[bar] = stoch_val - GetStochBuffer(i)[bar + 1];
                break;
-
+              }
             case CALC_SIGN:
+              {
                if(bar > 0)
-                  PlotBuffers[i][bar] = (stoch_val > StochBuffers[i][bar + 1]) ? 100 : ((stoch_val < StochBuffers[i][bar + 1]) ? 0 : 50);
+                  GetPlotBuffer(i)[bar] = (stoch_val > GetStochBuffer(i)[bar + 1]) ? 100 : ((stoch_val < GetStochBuffer(i)[bar + 1]) ? 0 : 50);
                break;
-
+              }
             case CALC_DIV_SUM:
+              {
                double div_sum = 0;
                if(bar > 0)
                  {
-                  for(int j = i; j <= DisplayEnd; j++)
+                  for(int j = i; j <= g_display_end; j++)
                     {
-                     div_sum += StochBuffers[j][bar] - StochBuffers[j][bar + 1];
+                     div_sum += GetStochBuffer(j)[bar] - GetStochBuffer(j)[bar + 1];
                     }
                  }
-               PlotBuffers[i][bar] = div_sum;
+               GetPlotBuffer(i)[bar] = div_sum;
                break;
-
+              }
             case CALC_MULT:
+              {
                double mult = 1.0;
-               for(int j = i; j <= DisplayEnd; j++)
+               for(int j = i; j <= g_display_end; j++)
                  {
-                  mult *= StochBuffers[j][bar] / 50.0;
+                  mult *= GetStochBuffer(j)[bar] / 50.0;
                  }
-               PlotBuffers[i][bar] = 50.0 + (50.0 * MathLog10(mult));
+               GetPlotBuffer(i)[bar] = 50.0 + (50.0 * MathLog10(mult));
                break;
+              }
            }
         }
      }
@@ -293,20 +331,27 @@ int OnCalculate(const int rates_total,
 double MA_OnArray(const double &arr[], int total, int period, ENUM_CUSTOM_MA_METHOD method, int shift)
   {
    double sum = 0;
+   if(period <= 0 || shift >= total - period) return 0;
+
    switch(method)
      {
       case CUSTOM_SMA:
       case CUSTOM_SMMA: // Simplified SMMA for this context
-         if(period <= 0 || shift >= total - period) return 0;
          for(int i = 0; i < period; i++) sum += arr[shift + i];
          return sum / period;
       case CUSTOM_EMA:
-         // Not fully implemented to avoid complexity, SMA is used as fallback
-         if(period <= 0 || shift >= total - period) return 0;
-         for(int i = 0; i < period; i++) sum += arr[shift + i];
-         return sum / period;
+         // Simplified EMA for this context
+         {
+         double ema_val = arr[shift + period -1];
+         double alpha = 2.0 / (period + 1.0);
+         for(int i = period - 2; i >= 0; i--)
+           {
+            ema_val = arr[shift + i] * alpha + ema_val * (1.0 - alpha);
+           }
+         return ema_val;
+         }
       case CUSTOM_LWMA:
-         if(period <= 0 || shift >= total - period) return 0;
+         {
          double lwma_sum = 0;
          int weight_sum = 0;
          for(int i = 0; i < period; i++)
@@ -315,6 +360,7 @@ double MA_OnArray(const double &arr[], int total, int period, ENUM_CUSTOM_MA_MET
             weight_sum += (period - i);
            }
          return (weight_sum > 0) ? lwma_sum / weight_sum : 0;
+         }
      }
    return 0;
   }
@@ -350,12 +396,9 @@ void ZLEMA_OnArray(const double &arr[], int total, int period, double &result_ar
    double ema_arr[];
    ArrayResize(ema_arr, total);
 
-   // Simplified EMA for ZLEMA
-   double alpha = 2.0 / (period + 1.0);
-   ema_arr[total-1] = arr[total-1];
-   for(int i = total - 2; i >= 0; i--)
+   for(int i = 0; i < total; i++)
      {
-      ema_arr[i] = arr[i] * alpha + ema_arr[i+1] * (1.0 - alpha);
+      ema_arr[i] = MA_OnArray(arr, total, period, CUSTOM_EMA, i);
      }
 
    for(int i = 0; i < total - lag; i++)
