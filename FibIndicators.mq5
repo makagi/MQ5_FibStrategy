@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2024, MetaQuotes Software Corp."
 #property link      "https://www.mql5.com"
-#property version   "6.0"
+#property version   "7.0"
 #property description "Refactored Fibonacci Stochastic Indicator with all fixes"
 
 #property indicator_separate_window
@@ -222,11 +222,10 @@ int OnCalculate(const int rates_total,
 //--- Fill stochastic buffers
    for(int i = 0; i < g_buff_num; i++)
      {
-      //--- Get buffer references
-      double& stoch_buffer = StochBuffer0;
+      double stoch_buffer[];
       switch(i)
         {
-         case 1: stoch_buffer=StochBuffer1; break; case 2: stoch_buffer=StochBuffer2; break; case 3: stoch_buffer=StochBuffer3; break;
+         case 0: stoch_buffer=StochBuffer0; break; case 1: stoch_buffer=StochBuffer1; break; case 2: stoch_buffer=StochBuffer2; break; case 3: stoch_buffer=StochBuffer3; break;
          case 4: stoch_buffer=StochBuffer4; break; case 5: stoch_buffer=StochBuffer5; break; case 6: stoch_buffer=StochBuffer6; break;
          case 7: stoch_buffer=StochBuffer7; break; case 8: stoch_buffer=StochBuffer8; break; case 9: stoch_buffer=StochBuffer9; break;
          case 10: stoch_buffer=StochBuffer10; break; case 11: stoch_buffer=StochBuffer11; break; case 12: stoch_buffer=StochBuffer12; break;
@@ -259,10 +258,11 @@ int OnCalculate(const int rates_total,
      {
       for(int i = g_display_start; i <= g_display_end; i++)
         {
-         double& plot_buffer = PlotBuffer0;
-         double& stoch_buffer = StochBuffer0;
+         double plot_buffer[];
+         double stoch_buffer[];
          switch(i)
            {
+             case 0: plot_buffer=PlotBuffer0; stoch_buffer=StochBuffer0; break;
              case 1: plot_buffer=PlotBuffer1; stoch_buffer=StochBuffer1; break;
              case 2: plot_buffer=PlotBuffer2; stoch_buffer=StochBuffer2; break;
              case 3: plot_buffer=PlotBuffer3; stoch_buffer=StochBuffer3; break;
