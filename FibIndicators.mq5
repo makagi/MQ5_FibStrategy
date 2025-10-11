@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2024, MetaQuotes Software Corp."
 #property link      "https://www.mql5.com"
-#property version   "9.0"
+#property version   "10.0"
 #property description "Refactored Fibonacci Stochastic Indicator with all fixes"
 
 #property indicator_separate_window
@@ -229,33 +229,57 @@ int OnCalculate(const int rates_total,
          ArrayResize(d_buffer, rates_total);
          CustomStochastic(g_fibonacci[i], g_fibonacci[i], in_slowing, in_ma_method, rates_total, high, low, close, k_buffer, d_buffer);
 
-         double target_buffer[];
-         switch(i){
-             case 0: target_buffer=StochBuffer0;break; case 1: target_buffer=StochBuffer1;break; case 2: target_buffer=StochBuffer2;break;
-             case 3: target_buffer=StochBuffer3;break; case 4: target_buffer=StochBuffer4;break; case 5: target_buffer=StochBuffer5;break;
-             case 6: target_buffer=StochBuffer6;break; case 7: target_buffer=StochBuffer7;break; case 8: target_buffer=StochBuffer8;break;
-             case 9: target_buffer=StochBuffer9;break; case 10: target_buffer=StochBuffer10;break; case 11: target_buffer=StochBuffer11;break;
-             case 12: target_buffer=StochBuffer12;break; case 13: target_buffer=StochBuffer13;break; case 14: target_buffer=StochBuffer14;break;
-             case 15: target_buffer=StochBuffer15;break; case 16: target_buffer=StochBuffer16;break; case 17: target_buffer=StochBuffer17;break;
-             case 18: target_buffer=StochBuffer18;break;
-         }
-         if(in_kd_type == KD_MAIN) ArrayCopy(target_buffer, k_buffer); else ArrayCopy(target_buffer, d_buffer);
+         if(in_kd_type == KD_MAIN)
+           {
+            switch(i){
+             case 0: ArrayCopy(StochBuffer0, k_buffer); break; case 1: ArrayCopy(StochBuffer1, k_buffer); break; case 2: ArrayCopy(StochBuffer2, k_buffer); break;
+             case 3: ArrayCopy(StochBuffer3, k_buffer); break; case 4: ArrayCopy(StochBuffer4, k_buffer); break; case 5: ArrayCopy(StochBuffer5, k_buffer); break;
+             case 6: ArrayCopy(StochBuffer6, k_buffer); break; case 7: ArrayCopy(StochBuffer7, k_buffer); break; case 8: ArrayCopy(StochBuffer8, k_buffer); break;
+             case 9: ArrayCopy(StochBuffer9, k_buffer); break; case 10: ArrayCopy(StochBuffer10, k_buffer); break; case 11: ArrayCopy(StochBuffer11, k_buffer); break;
+             case 12: ArrayCopy(StochBuffer12, k_buffer); break; case 13: ArrayCopy(StochBuffer13, k_buffer); break; case 14: ArrayCopy(StochBuffer14, k_buffer); break;
+             case 15: ArrayCopy(StochBuffer15, k_buffer); break; case 16: ArrayCopy(StochBuffer16, k_buffer); break; case 17: ArrayCopy(StochBuffer17, k_buffer); break;
+             case 18: ArrayCopy(StochBuffer18, k_buffer); break;
+            }
+           }
+         else
+           {
+            switch(i){
+             case 0: ArrayCopy(StochBuffer0, d_buffer); break; case 1: ArrayCopy(StochBuffer1, d_buffer); break; case 2: ArrayCopy(StochBuffer2, d_buffer); break;
+             case 3: ArrayCopy(StochBuffer3, d_buffer); break; case 4: ArrayCopy(StochBuffer4, d_buffer); break; case 5: ArrayCopy(StochBuffer5, d_buffer); break;
+             case 6: ArrayCopy(StochBuffer6, d_buffer); break; case 7: ArrayCopy(StochBuffer7, d_buffer); break; case 8: ArrayCopy(StochBuffer8, d_buffer); break;
+             case 9: ArrayCopy(StochBuffer9, d_buffer); break; case 10: ArrayCopy(StochBuffer10, d_buffer); break; case 11: ArrayCopy(StochBuffer11, d_buffer); break;
+             case 12: ArrayCopy(StochBuffer12, d_buffer); break; case 13: ArrayCopy(StochBuffer13, d_buffer); break; case 14: ArrayCopy(StochBuffer14, d_buffer); break;
+             case 15: ArrayCopy(StochBuffer15, d_buffer); break; case 16: ArrayCopy(StochBuffer16, d_buffer); break; case 17: ArrayCopy(StochBuffer17, d_buffer); break;
+             case 18: ArrayCopy(StochBuffer18, d_buffer); break;
+            }
+           }
         }
       else // Standard MA calculation
         {
          if(g_stoch_handles[i] == INVALID_HANDLE) continue;
          int line_type = (in_kd_type == KD_MAIN) ? MAIN_LINE : SIGNAL_LINE;
-         double target_buffer[];
-         switch(i){
-             case 0: target_buffer=StochBuffer0;break; case 1: target_buffer=StochBuffer1;break; case 2: target_buffer=StochBuffer2;break;
-             case 3: target_buffer=StochBuffer3;break; case 4: target_buffer=StochBuffer4;break; case 5: target_buffer=StochBuffer5;break;
-             case 6: target_buffer=StochBuffer6;break; case 7: target_buffer=StochBuffer7;break; case 8: target_buffer=StochBuffer8;break;
-             case 9: target_buffer=StochBuffer9;break; case 10: target_buffer=StochBuffer10;break; case 11: target_buffer=StochBuffer11;break;
-             case 12: target_buffer=StochBuffer12;break; case 13: target_buffer=StochBuffer13;break; case 14: target_buffer=StochBuffer14;break;
-             case 15: target_buffer=StochBuffer15;break; case 16: target_buffer=StochBuffer16;break; case 17: target_buffer=StochBuffer17;break;
-             case 18: target_buffer=StochBuffer18;break;
-         }
-         CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, target_buffer);
+         switch(i)
+           {
+            case 0: CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, StochBuffer0); break;
+            case 1: CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, StochBuffer1); break;
+            case 2: CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, StochBuffer2); break;
+            case 3: CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, StochBuffer3); break;
+            case 4: CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, StochBuffer4); break;
+            case 5: CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, StochBuffer5); break;
+            case 6: CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, StochBuffer6); break;
+            case 7: CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, StochBuffer7); break;
+            case 8: CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, StochBuffer8); break;
+            case 9: CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, StochBuffer9); break;
+            case 10: CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, StochBuffer10); break;
+            case 11: CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, StochBuffer11); break;
+            case 12: CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, StochBuffer12); break;
+            case 13: CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, StochBuffer13); break;
+            case 14: CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, StochBuffer14); break;
+            case 15: CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, StochBuffer15); break;
+            case 16: CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, StochBuffer16); break;
+            case 17: CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, StochBuffer17); break;
+            case 18: CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, StochBuffer18); break;
+           }
         }
      }
 
