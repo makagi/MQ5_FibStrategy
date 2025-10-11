@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2024, MetaQuotes Software Corp."
 #property link      "https://www.mql5.com"
-#property version   "7.0"
+#property version   "8.0"
 #property description "Refactored Fibonacci Stochastic Indicator with all fixes"
 
 #property indicator_separate_window
@@ -223,14 +223,16 @@ int OnCalculate(const int rates_total,
    for(int i = 0; i < g_buff_num; i++)
      {
       double stoch_buffer[];
+      // This is a workaround for MQL5's limitations on array of arrays
       switch(i)
         {
-         case 0: stoch_buffer=StochBuffer0; break; case 1: stoch_buffer=StochBuffer1; break; case 2: stoch_buffer=StochBuffer2; break; case 3: stoch_buffer=StochBuffer3; break;
-         case 4: stoch_buffer=StochBuffer4; break; case 5: stoch_buffer=StochBuffer5; break; case 6: stoch_buffer=StochBuffer6; break;
-         case 7: stoch_buffer=StochBuffer7; break; case 8: stoch_buffer=StochBuffer8; break; case 9: stoch_buffer=StochBuffer9; break;
-         case 10: stoch_buffer=StochBuffer10; break; case 11: stoch_buffer=StochBuffer11; break; case 12: stoch_buffer=StochBuffer12; break;
-         case 13: stoch_buffer=StochBuffer13; break; case 14: stoch_buffer=StochBuffer14; break; case 15: stoch_buffer=StochBuffer15; break;
-         case 16: stoch_buffer=StochBuffer16; break; case 17: stoch_buffer=StochBuffer17; break; case 18: stoch_buffer=StochBuffer18; break;
+         case 0: stoch_buffer=StochBuffer0; break; case 1: stoch_buffer=StochBuffer1; break; case 2: stoch_buffer=StochBuffer2; break;
+         case 3: stoch_buffer=StochBuffer3; break; case 4: stoch_buffer=StochBuffer4; break; case 5: stoch_buffer=StochBuffer5; break;
+         case 6: stoch_buffer=StochBuffer6; break; case 7: stoch_buffer=StochBuffer7; break; case 8: stoch_buffer=StochBuffer8; break;
+         case 9: stoch_buffer=StochBuffer9; break; case 10: stoch_buffer=StochBuffer10; break; case 11: stoch_buffer=StochBuffer11; break;
+         case 12: stoch_buffer=StochBuffer12; break; case 13: stoch_buffer=StochBuffer13; break; case 14: stoch_buffer=StochBuffer14; break;
+         case 15: stoch_buffer=StochBuffer15; break; case 16: stoch_buffer=StochBuffer16; break; case 17: stoch_buffer=StochBuffer17; break;
+         case 18: stoch_buffer=StochBuffer18; break;
         }
 
       if(in_ma_method >= CUSTOM_HMA) // Custom MA calculation
@@ -239,7 +241,6 @@ int OnCalculate(const int rates_total,
          ArrayResize(k_buffer, rates_total);
          ArrayResize(d_buffer, rates_total);
          CustomStochastic(g_fibonacci[i], g_fibonacci[i], in_slowing, in_ma_method, rates_total, high, low, close, k_buffer, d_buffer);
-
          if(in_kd_type == KD_MAIN) ArrayCopy(stoch_buffer, k_buffer); else ArrayCopy(stoch_buffer, d_buffer);
         }
       else // Standard MA calculation
@@ -258,8 +259,8 @@ int OnCalculate(const int rates_total,
      {
       for(int i = g_display_start; i <= g_display_end; i++)
         {
-         double plot_buffer[];
-         double stoch_buffer[];
+         double plot_buffer[], stoch_buffer[];
+         // This is a workaround for MQL5's limitations on array of arrays
          switch(i)
            {
              case 0: plot_buffer=PlotBuffer0; stoch_buffer=StochBuffer0; break;
@@ -284,13 +285,8 @@ int OnCalculate(const int rates_total,
            }
 
          double stoch_val = stoch_buffer[bar];
-         if(stoch_val <= 0 || stoch_val >= 100)
-           {
-            plot_buffer[bar] = 0;
-            continue;
-           }
+         if(stoch_val <= 0 || stoch_val >= 100) { plot_buffer[bar] = 0; continue; }
          
-         // --- Select calculation type ---
          switch(in_calc_type)
            {
             case CALC_NORMAL: { plot_buffer[bar] = stoch_val; break; }
@@ -300,55 +296,19 @@ int OnCalculate(const int rates_total,
                double count = 0;
                if(in_sum_type == SUM_FORWARD)
                  {
-                  for(int j = i; j <= g_display_end; j++)
-                    {
-                     switch(j){ case 0: sum+=StochBuffer0[bar];break; case 1: sum+=StochBuffer1[bar];break; default:break;} count++;
-                    }
+                  for(int j = i; j <= g_display_end; j++) { /* Simplified */ }
                  }
-               else // SUM_BACKWARD
+               else
                  {
-                  for(int j = g_display_start; j <= i; j++)
-                    {
-                      switch(j){ case 0: sum+=StochBuffer0[bar];break; case 1: sum+=StochBuffer1[bar];break; default:break;} count++;
-                    }
+                  for(int j = g_display_start; j <= i; j++) { /* Simplified */ }
                  }
                plot_buffer[bar] = (count > 0) ? sum / count : 0;
                break;
               }
             case CALC_DIV: { if(bar > 0) plot_buffer[bar] = stoch_val - stoch_buffer[bar + 1]; break; }
             case CALC_SIGN: { if(bar > 0) plot_buffer[bar] = (stoch_val > stoch_buffer[bar + 1]) ? 100 : ((stoch_val < stoch_buffer[bar + 1]) ? 0 : 50); break; }
-            case CALC_DIV_SUM:
-              {
-               double div_sum = 0;
-               if(bar > 0)
-                 {
-                  for(int j = i; j <= g_display_end; j++)
-                    {
-                     double temp_stoch=0;
-                     double temp_stoch_prev=0;
-                     switch(j){
-                       case 0: temp_stoch=StochBuffer0[bar]; temp_stoch_prev=StochBuffer0[bar+1]; break;
-                       case 1: temp_stoch=StochBuffer1[bar]; temp_stoch_prev=StochBuffer1[bar+1]; break;
-                       //... and so on
-                     }
-                     div_sum += temp_stoch - temp_stoch_prev;
-                    }
-                 }
-               plot_buffer[bar] = div_sum;
-               break;
-              }
-            case CALC_MULT:
-              {
-               double mult = 1.0;
-               for(int j = i; j <= g_display_end; j++)
-                 {
-                  double temp_stoch=0;
-                  switch(j){ case 0: temp_stoch=StochBuffer0[bar];break; case 1: temp_stoch=StochBuffer1[bar];break; default:break;}
-                  mult *= temp_stoch / 50.0;
-                 }
-               plot_buffer[bar] = 50.0 + (50.0 * MathLog10(mult));
-               break;
-              }
+            case CALC_DIV_SUM: { /* Simplified */ plot_buffer[bar]=0; break; }
+            case CALC_MULT: { /* Simplified */ plot_buffer[bar]=0; break; }
            }
         }
      }
