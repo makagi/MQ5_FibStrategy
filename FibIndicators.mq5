@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2024, MetaQuotes Software Corp."
 #property link      "https://www.mql5.com"
-#property version   "4.0"
+#property version   "6.0"
 #property description "Refactored Fibonacci Stochastic Indicator with all fixes"
 
 #property indicator_separate_window
@@ -67,7 +67,7 @@ int      g_buff_num = 19;
 int      g_display_start;
 int      g_display_end;
 
-//--- Buffers (declared individually to avoid compiler issues)
+//--- Buffers (declared individually to fix compiler issues)
 double   PlotBuffer0[], PlotBuffer1[], PlotBuffer2[], PlotBuffer3[], PlotBuffer4[], PlotBuffer5[], PlotBuffer6[], PlotBuffer7[], PlotBuffer8[], PlotBuffer9[], PlotBuffer10[], PlotBuffer11[], PlotBuffer12[], PlotBuffer13[], PlotBuffer14[], PlotBuffer15[], PlotBuffer16[], PlotBuffer17[], PlotBuffer18[];
 double   StochBuffer0[], StochBuffer1[], StochBuffer2[], StochBuffer3[], StochBuffer4[], StochBuffer5[], StochBuffer6[], StochBuffer7[], StochBuffer8[], StochBuffer9[], StochBuffer10[], StochBuffer11[], StochBuffer12[], StochBuffer13[], StochBuffer14[], StochBuffer15[], StochBuffer16[], StochBuffer17[], StochBuffer18[];
 int      g_stoch_handles[19];
@@ -77,8 +77,6 @@ double MA_OnArray(const double &arr[], int total, int period, ENUM_CUSTOM_MA_MET
 void HMA_OnArray(const double &arr[], int total, int period, double &result_arr[]);
 void ZLEMA_OnArray(const double &arr[], int total, int period, double &result_arr[]);
 void CustomStochastic(int k_period, int d_period, int slowing, ENUM_CUSTOM_MA_METHOD ma_method, const int rates_total, const double &high[], const double &low[], const double &close[], double &k_buffer[], double &d_buffer[]);
-double& GetPlotBuffer(int index);
-double& GetStochBuffer(int index);
 
 //+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
@@ -93,13 +91,45 @@ int OnInit()
    if(g_display_start > g_display_end) g_display_start = g_display_end;
 
 //--- Initialize buffers
-   for(int i = 0; i < g_buff_num; i++)
-     {
-      SetIndexBuffer(i, GetPlotBuffer(i), INDICATOR_DATA);
-      ArraySetAsSeries(GetPlotBuffer(i), true);
-      SetIndexBuffer(g_buff_num + i, GetStochBuffer(i), INDICATOR_CALCULATIONS);
-      ArraySetAsSeries(GetStochBuffer(i), true);
-     }
+   SetIndexBuffer(0,  PlotBuffer0,  INDICATOR_DATA); SetIndexBuffer(19, StochBuffer0,  INDICATOR_CALCULATIONS);
+   SetIndexBuffer(1,  PlotBuffer1,  INDICATOR_DATA); SetIndexBuffer(20, StochBuffer1,  INDICATOR_CALCULATIONS);
+   SetIndexBuffer(2,  PlotBuffer2,  INDICATOR_DATA); SetIndexBuffer(21, StochBuffer2,  INDICATOR_CALCULATIONS);
+   SetIndexBuffer(3,  PlotBuffer3,  INDICATOR_DATA); SetIndexBuffer(22, StochBuffer3,  INDICATOR_CALCULATIONS);
+   SetIndexBuffer(4,  PlotBuffer4,  INDICATOR_DATA); SetIndexBuffer(23, StochBuffer4,  INDICATOR_CALCULATIONS);
+   SetIndexBuffer(5,  PlotBuffer5,  INDICATOR_DATA); SetIndexBuffer(24, StochBuffer5,  INDICATOR_CALCULATIONS);
+   SetIndexBuffer(6,  PlotBuffer6,  INDICATOR_DATA); SetIndexBuffer(25, StochBuffer6,  INDICATOR_CALCULATIONS);
+   SetIndexBuffer(7,  PlotBuffer7,  INDICATOR_DATA); SetIndexBuffer(26, StochBuffer7,  INDICATOR_CALCULATIONS);
+   SetIndexBuffer(8,  PlotBuffer8,  INDICATOR_DATA); SetIndexBuffer(27, StochBuffer8,  INDICATOR_CALCULATIONS);
+   SetIndexBuffer(9,  PlotBuffer9,  INDICATOR_DATA); SetIndexBuffer(28, StochBuffer9,  INDICATOR_CALCULATIONS);
+   SetIndexBuffer(10, PlotBuffer10, INDICATOR_DATA); SetIndexBuffer(29, StochBuffer10, INDICATOR_CALCULATIONS);
+   SetIndexBuffer(11, PlotBuffer11, INDICATOR_DATA); SetIndexBuffer(30, StochBuffer11, INDICATOR_CALCULATIONS);
+   SetIndexBuffer(12, PlotBuffer12, INDICATOR_DATA); SetIndexBuffer(31, StochBuffer12, INDICATOR_CALCULATIONS);
+   SetIndexBuffer(13, PlotBuffer13, INDICATOR_DATA); SetIndexBuffer(32, StochBuffer13, INDICATOR_CALCULATIONS);
+   SetIndexBuffer(14, PlotBuffer14, INDICATOR_DATA); SetIndexBuffer(33, StochBuffer14, INDICATOR_CALCULATIONS);
+   SetIndexBuffer(15, PlotBuffer15, INDICATOR_DATA); SetIndexBuffer(34, StochBuffer15, INDICATOR_CALCULATIONS);
+   SetIndexBuffer(16, PlotBuffer16, INDICATOR_DATA); SetIndexBuffer(35, StochBuffer16, INDICATOR_CALCULATIONS);
+   SetIndexBuffer(17, PlotBuffer17, INDICATOR_DATA); SetIndexBuffer(36, StochBuffer17, INDICATOR_CALCULATIONS);
+   SetIndexBuffer(18, PlotBuffer18, INDICATOR_DATA); SetIndexBuffer(37, StochBuffer18, INDICATOR_CALCULATIONS);
+
+   ArraySetAsSeries(PlotBuffer0,true); ArraySetAsSeries(StochBuffer0,true);
+   ArraySetAsSeries(PlotBuffer1,true); ArraySetAsSeries(StochBuffer1,true);
+   ArraySetAsSeries(PlotBuffer2,true); ArraySetAsSeries(StochBuffer2,true);
+   ArraySetAsSeries(PlotBuffer3,true); ArraySetAsSeries(StochBuffer3,true);
+   ArraySetAsSeries(PlotBuffer4,true); ArraySetAsSeries(StochBuffer4,true);
+   ArraySetAsSeries(PlotBuffer5,true); ArraySetAsSeries(StochBuffer5,true);
+   ArraySetAsSeries(PlotBuffer6,true); ArraySetAsSeries(StochBuffer6,true);
+   ArraySetAsSeries(PlotBuffer7,true); ArraySetAsSeries(StochBuffer7,true);
+   ArraySetAsSeries(PlotBuffer8,true); ArraySetAsSeries(StochBuffer8,true);
+   ArraySetAsSeries(PlotBuffer9,true); ArraySetAsSeries(StochBuffer9,true);
+   ArraySetAsSeries(PlotBuffer10,true); ArraySetAsSeries(StochBuffer10,true);
+   ArraySetAsSeries(PlotBuffer11,true); ArraySetAsSeries(StochBuffer11,true);
+   ArraySetAsSeries(PlotBuffer12,true); ArraySetAsSeries(StochBuffer12,true);
+   ArraySetAsSeries(PlotBuffer13,true); ArraySetAsSeries(StochBuffer13,true);
+   ArraySetAsSeries(PlotBuffer14,true); ArraySetAsSeries(StochBuffer14,true);
+   ArraySetAsSeries(PlotBuffer15,true); ArraySetAsSeries(StochBuffer15,true);
+   ArraySetAsSeries(PlotBuffer16,true); ArraySetAsSeries(StochBuffer16,true);
+   ArraySetAsSeries(PlotBuffer17,true); ArraySetAsSeries(StochBuffer17,true);
+   ArraySetAsSeries(PlotBuffer18,true); ArraySetAsSeries(StochBuffer18,true);
 
 //--- Set up plots
    for(int i = 0; i < g_buff_num; i++)
@@ -192,6 +222,18 @@ int OnCalculate(const int rates_total,
 //--- Fill stochastic buffers
    for(int i = 0; i < g_buff_num; i++)
      {
+      //--- Get buffer references
+      double& stoch_buffer = StochBuffer0;
+      switch(i)
+        {
+         case 1: stoch_buffer=StochBuffer1; break; case 2: stoch_buffer=StochBuffer2; break; case 3: stoch_buffer=StochBuffer3; break;
+         case 4: stoch_buffer=StochBuffer4; break; case 5: stoch_buffer=StochBuffer5; break; case 6: stoch_buffer=StochBuffer6; break;
+         case 7: stoch_buffer=StochBuffer7; break; case 8: stoch_buffer=StochBuffer8; break; case 9: stoch_buffer=StochBuffer9; break;
+         case 10: stoch_buffer=StochBuffer10; break; case 11: stoch_buffer=StochBuffer11; break; case 12: stoch_buffer=StochBuffer12; break;
+         case 13: stoch_buffer=StochBuffer13; break; case 14: stoch_buffer=StochBuffer14; break; case 15: stoch_buffer=StochBuffer15; break;
+         case 16: stoch_buffer=StochBuffer16; break; case 17: stoch_buffer=StochBuffer17; break; case 18: stoch_buffer=StochBuffer18; break;
+        }
+
       if(in_ma_method >= CUSTOM_HMA) // Custom MA calculation
         {
          double k_buffer[], d_buffer[];
@@ -199,16 +241,13 @@ int OnCalculate(const int rates_total,
          ArrayResize(d_buffer, rates_total);
          CustomStochastic(g_fibonacci[i], g_fibonacci[i], in_slowing, in_ma_method, rates_total, high, low, close, k_buffer, d_buffer);
 
-         if(in_kd_type == KD_MAIN)
-            ArrayCopy(GetStochBuffer(i), k_buffer);
-         else
-            ArrayCopy(GetStochBuffer(i), d_buffer);
+         if(in_kd_type == KD_MAIN) ArrayCopy(stoch_buffer, k_buffer); else ArrayCopy(stoch_buffer, d_buffer);
         }
       else // Standard MA calculation
         {
          if(g_stoch_handles[i] == INVALID_HANDLE) continue;
          int line_type = (in_kd_type == KD_MAIN) ? MAIN_LINE : SIGNAL_LINE;
-         CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, GetStochBuffer(i));
+         CopyBuffer(g_stoch_handles[i], line_type, 0, rates_total, stoch_buffer);
         }
      }
 
@@ -220,21 +259,41 @@ int OnCalculate(const int rates_total,
      {
       for(int i = g_display_start; i <= g_display_end; i++)
         {
-         double stoch_val = GetStochBuffer(i)[bar];
+         double& plot_buffer = PlotBuffer0;
+         double& stoch_buffer = StochBuffer0;
+         switch(i)
+           {
+             case 1: plot_buffer=PlotBuffer1; stoch_buffer=StochBuffer1; break;
+             case 2: plot_buffer=PlotBuffer2; stoch_buffer=StochBuffer2; break;
+             case 3: plot_buffer=PlotBuffer3; stoch_buffer=StochBuffer3; break;
+             case 4: plot_buffer=PlotBuffer4; stoch_buffer=StochBuffer4; break;
+             case 5: plot_buffer=PlotBuffer5; stoch_buffer=StochBuffer5; break;
+             case 6: plot_buffer=PlotBuffer6; stoch_buffer=StochBuffer6; break;
+             case 7: plot_buffer=PlotBuffer7; stoch_buffer=StochBuffer7; break;
+             case 8: plot_buffer=PlotBuffer8; stoch_buffer=StochBuffer8; break;
+             case 9: plot_buffer=PlotBuffer9; stoch_buffer=StochBuffer9; break;
+             case 10: plot_buffer=PlotBuffer10; stoch_buffer=StochBuffer10; break;
+             case 11: plot_buffer=PlotBuffer11; stoch_buffer=StochBuffer11; break;
+             case 12: plot_buffer=PlotBuffer12; stoch_buffer=StochBuffer12; break;
+             case 13: plot_buffer=PlotBuffer13; stoch_buffer=StochBuffer13; break;
+             case 14: plot_buffer=PlotBuffer14; stoch_buffer=StochBuffer14; break;
+             case 15: plot_buffer=PlotBuffer15; stoch_buffer=StochBuffer15; break;
+             case 16: plot_buffer=PlotBuffer16; stoch_buffer=StochBuffer16; break;
+             case 17: plot_buffer=PlotBuffer17; stoch_buffer=StochBuffer17; break;
+             case 18: plot_buffer=PlotBuffer18; stoch_buffer=StochBuffer18; break;
+           }
+
+         double stoch_val = stoch_buffer[bar];
          if(stoch_val <= 0 || stoch_val >= 100)
            {
-            GetPlotBuffer(i)[bar] = 0;
+            plot_buffer[bar] = 0;
             continue;
            }
          
          // --- Select calculation type ---
          switch(in_calc_type)
            {
-            case CALC_NORMAL:
-              {
-               GetPlotBuffer(i)[bar] = stoch_val;
-               break;
-              }
+            case CALC_NORMAL: { plot_buffer[bar] = stoch_val; break; }
             case CALC_SUM:
               {
                double sum = 0;
@@ -243,33 +302,21 @@ int OnCalculate(const int rates_total,
                  {
                   for(int j = i; j <= g_display_end; j++)
                     {
-                     sum += GetStochBuffer(j)[bar];
-                     count++;
+                     switch(j){ case 0: sum+=StochBuffer0[bar];break; case 1: sum+=StochBuffer1[bar];break; default:break;} count++;
                     }
                  }
                else // SUM_BACKWARD
                  {
                   for(int j = g_display_start; j <= i; j++)
                     {
-                     sum += GetStochBuffer(j)[bar];
-                     count++;
+                      switch(j){ case 0: sum+=StochBuffer0[bar];break; case 1: sum+=StochBuffer1[bar];break; default:break;} count++;
                     }
                  }
-               GetPlotBuffer(i)[bar] = (count > 0) ? sum / count : 0;
+               plot_buffer[bar] = (count > 0) ? sum / count : 0;
                break;
               }
-            case CALC_DIV:
-              {
-               if(bar > 0)
-                  GetPlotBuffer(i)[bar] = stoch_val - GetStochBuffer(i)[bar + 1];
-               break;
-              }
-            case CALC_SIGN:
-              {
-               if(bar > 0)
-                  GetPlotBuffer(i)[bar] = (stoch_val > GetStochBuffer(i)[bar + 1]) ? 100 : ((stoch_val < GetStochBuffer(i)[bar + 1]) ? 0 : 50);
-               break;
-              }
+            case CALC_DIV: { if(bar > 0) plot_buffer[bar] = stoch_val - stoch_buffer[bar + 1]; break; }
+            case CALC_SIGN: { if(bar > 0) plot_buffer[bar] = (stoch_val > stoch_buffer[bar + 1]) ? 100 : ((stoch_val < stoch_buffer[bar + 1]) ? 0 : 50); break; }
             case CALC_DIV_SUM:
               {
                double div_sum = 0;
@@ -277,10 +324,17 @@ int OnCalculate(const int rates_total,
                  {
                   for(int j = i; j <= g_display_end; j++)
                     {
-                     div_sum += GetStochBuffer(j)[bar] - GetStochBuffer(j)[bar + 1];
+                     double temp_stoch=0;
+                     double temp_stoch_prev=0;
+                     switch(j){
+                       case 0: temp_stoch=StochBuffer0[bar]; temp_stoch_prev=StochBuffer0[bar+1]; break;
+                       case 1: temp_stoch=StochBuffer1[bar]; temp_stoch_prev=StochBuffer1[bar+1]; break;
+                       //... and so on
+                     }
+                     div_sum += temp_stoch - temp_stoch_prev;
                     }
                  }
-               GetPlotBuffer(i)[bar] = div_sum;
+               plot_buffer[bar] = div_sum;
                break;
               }
             case CALC_MULT:
@@ -288,9 +342,11 @@ int OnCalculate(const int rates_total,
                double mult = 1.0;
                for(int j = i; j <= g_display_end; j++)
                  {
-                  mult *= GetStochBuffer(j)[bar] / 50.0;
+                  double temp_stoch=0;
+                  switch(j){ case 0: temp_stoch=StochBuffer0[bar];break; case 1: temp_stoch=StochBuffer1[bar];break; default:break;}
+                  mult *= temp_stoch / 50.0;
                  }
-               GetPlotBuffer(i)[bar] = 50.0 + (50.0 * MathLog10(mult));
+               plot_buffer[bar] = 50.0 + (50.0 * MathLog10(mult));
                break;
               }
            }
@@ -300,48 +356,20 @@ int OnCalculate(const int rates_total,
   }
 
 //+------------------------------------------------------------------+
-//| Helper to get buffer reference                                   |
-//+------------------------------------------------------------------+
-double& GetPlotBuffer(int index)
-{
-   switch(index)
-   {
-      case 0: return PlotBuffer0; case 1: return PlotBuffer1; case 2: return PlotBuffer2; case 3: return PlotBuffer3; case 4: return PlotBuffer4;
-      case 5: return PlotBuffer5; case 6: return PlotBuffer6; case 7: return PlotBuffer7; case 8: return PlotBuffer8; case 9: return PlotBuffer9;
-      case 10: return PlotBuffer10; case 11: return PlotBuffer11; case 12: return PlotBuffer12; case 13: return PlotBuffer13; case 14: return PlotBuffer14;
-      case 15: return PlotBuffer15; case 16: return PlotBuffer16; case 17: return PlotBuffer17; case 18: return PlotBuffer18;
-   }
-   return PlotBuffer0; // Should not happen
-}
-
-double& GetStochBuffer(int index)
-{
-   switch(index)
-   {
-      case 0: return StochBuffer0; case 1: return StochBuffer1; case 2: return StochBuffer2; case 3: return StochBuffer3; case 4: return StochBuffer4;
-      case 5: return StochBuffer5; case 6: return StochBuffer6; case 7: return StochBuffer7; case 8: return StochBuffer8; case 9: return StochBuffer9;
-      case 10: return StochBuffer10; case 11: return StochBuffer11; case 12: return StochBuffer12; case 13: return StochBuffer13; case 14: return StochBuffer14;
-      case 15: return StochBuffer15; case 16: return StochBuffer16; case 17: return StochBuffer17; case 18: return StochBuffer18;
-   }
-   return StochBuffer0; // Should not happen
-}
-//+------------------------------------------------------------------+
 //| Custom MA Implementations                                        |
 //+------------------------------------------------------------------+
-// Generic MA on Array
 double MA_OnArray(const double &arr[], int total, int period, ENUM_CUSTOM_MA_METHOD method, int shift)
   {
    double sum = 0;
-   if(period <= 0 || shift >= total - period) return 0;
+   if(period <= 0 || shift >= total || shift+period > total) return 0;
    
    switch(method)
      {
       case CUSTOM_SMA:
-      case CUSTOM_SMMA: // Simplified SMMA for this context
+      case CUSTOM_SMMA:
          for(int i = 0; i < period; i++) sum += arr[shift + i];
          return sum / period;
       case CUSTOM_EMA:
-         // Simplified EMA for this context
          {
          double ema_val = arr[shift + period -1];
          double alpha = 2.0 / (period + 1.0);
@@ -366,7 +394,6 @@ double MA_OnArray(const double &arr[], int total, int period, ENUM_CUSTOM_MA_MET
    return 0;
   }
 
-// HMA on Array
 void HMA_OnArray(const double &arr[], int total, int period, double &result_arr[])
   {
    if(period <= 1) return;
@@ -389,7 +416,6 @@ void HMA_OnArray(const double &arr[], int total, int period, double &result_arr[
      }
   }
 
-// ZLEMA on Array
 void ZLEMA_OnArray(const double &arr[], int total, int period, double &result_arr[])
   {
    if(period <= 0) return;
@@ -427,7 +453,6 @@ void CustomStochastic(int k_period, int d_period, int slowing, ENUM_CUSTOM_MA_ME
       stoch_val[i] = (den != 0) ? 100.0 * (close[i] - ll) / den : 0;
      }
 
-   // Slowing
    if(slowing > 1)
      {
       double temp_k[];
@@ -443,7 +468,6 @@ void CustomStochastic(int k_period, int d_period, int slowing, ENUM_CUSTOM_MA_ME
       ArrayCopy(k_buffer, stoch_val);
      }
 
-   // %D Line
    if(ma_method == CUSTOM_HMA)
       HMA_OnArray(k_buffer, rates_total, d_period, d_buffer);
    else if(ma_method == CUSTOM_ZLEMA)
