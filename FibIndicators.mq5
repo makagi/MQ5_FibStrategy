@@ -203,6 +203,65 @@ int OnInit()
   }
 
 //+------------------------------------------------------------------+
+//| Helper function to get a value from the correct Stoch buffer     |
+//+------------------------------------------------------------------+
+double GetStochValue(int index, int bar)
+  {
+   switch(index)
+     {
+      case 0: return StochBuffer0[bar];
+      case 1: return StochBuffer1[bar];
+      case 2: return StochBuffer2[bar];
+      case 3: return StochBuffer3[bar];
+      case 4: return StochBuffer4[bar];
+      case 5: return StochBuffer5[bar];
+      case 6: return StochBuffer6[bar];
+      case 7: return StochBuffer7[bar];
+      case 8: return StochBuffer8[bar];
+      case 9: return StochBuffer9[bar];
+      case 10: return StochBuffer10[bar];
+      case 11: return StochBuffer11[bar];
+      case 12: return StochBuffer12[bar];
+      case 13: return StochBuffer13[bar];
+      case 14: return StochBuffer14[bar];
+      case 15: return StochBuffer15[bar];
+      case 16: return StochBuffer16[bar];
+      case 17: return StochBuffer17[bar];
+      case 18: return StochBuffer18[bar];
+      default: return 0.0;
+     }
+  }
+
+//+------------------------------------------------------------------+
+//| Helper function to set a value in the correct Plot buffer        |
+//+------------------------------------------------------------------+
+void SetPlotValue(int index, int bar, double value)
+  {
+   switch(index)
+     {
+      case 0: PlotBuffer0[bar] = value; break;
+      case 1: PlotBuffer1[bar] = value; break;
+      case 2: PlotBuffer2[bar] = value; break;
+      case 3: PlotBuffer3[bar] = value; break;
+      case 4: PlotBuffer4[bar] = value; break;
+      case 5: PlotBuffer5[bar] = value; break;
+      case 6: PlotBuffer6[bar] = value; break;
+      case 7: PlotBuffer7[bar] = value; break;
+      case 8: PlotBuffer8[bar] = value; break;
+      case 9: PlotBuffer9[bar] = value; break;
+      case 10: PlotBuffer10[bar] = value; break;
+      case 11: PlotBuffer11[bar] = value; break;
+      case 12: PlotBuffer12[bar] = value; break;
+      case 13: PlotBuffer13[bar] = value; break;
+      case 14: PlotBuffer14[bar] = value; break;
+      case 15: PlotBuffer15[bar] = value; break;
+      case 16: PlotBuffer16[bar] = value; break;
+      case 17: PlotBuffer17[bar] = value; break;
+      case 18: PlotBuffer18[bar] = value; break;
+     }
+  }
+
+//+------------------------------------------------------------------+
 //| Custom indicator iteration function                              |
 //+------------------------------------------------------------------+
 int OnCalculate(const int rates_total,
@@ -286,62 +345,146 @@ int OnCalculate(const int rates_total,
 
 //--- Calculate plot buffers
    int limit = rates_total - prev_calculated - 1;
-   if (prev_calculated==0) limit = rates_total - 1;
-   
+   if(prev_calculated == 0) limit = rates_total - 1;
+
    for(int bar = limit; bar >= 0; bar--)
      {
+      // --- Create a temporary array of stochastic values for the current bar ---
+      double current_stoch_values[19];
+      for(int i = 0; i < g_buff_num; i++)
+        {
+         double stoch_val = GetStochValue(i, bar);
+         if(stoch_val > 0.0 && stoch_val < 100.0)
+           {
+            current_stoch_values[i] = stoch_val;
+           }
+         else
+           {
+            current_stoch_values[i] = 0.0;
+           }
+        }
+
       for(int i = g_display_start; i <= g_display_end; i++)
         {
-         double stoch_val;
-         switch(i)
+         double plot_value = 0.0;
+         double current_stoch = current_stoch_values[i];
+
+         if(current_stoch <= 0.0)
            {
-             case 0: stoch_val=StochBuffer0[bar];break; case 1: stoch_val=StochBuffer1[bar];break; case 2: stoch_val=StochBuffer2[bar];break;
-             case 3: stoch_val=StochBuffer3[bar];break; case 4: stoch_val=StochBuffer4[bar];break; case 5: stoch_val=StochBuffer5[bar];break;
-             case 6: stoch_val=StochBuffer6[bar];break; case 7: stoch_val=StochBuffer7[bar];break; case 8: stoch_val=StochBuffer8[bar];break;
-             case 9: stoch_val=StochBuffer9[bar];break; case 10: stoch_val=StochBuffer10[bar];break; case 11: stoch_val=StochBuffer11[bar];break;
-             case 12: stoch_val=StochBuffer12[bar];break; case 13: stoch_val=StochBuffer13[bar];break; case 14: stoch_val=StochBuffer14[bar];break;
-             case 15: stoch_val=StochBuffer15[bar];break; case 16: stoch_val=StochBuffer16[bar];break; case 17: stoch_val=StochBuffer17[bar];break;
-             case 18: stoch_val=StochBuffer18[bar];break;
-             default: stoch_val=0; break;
+            SetPlotValue(i, bar, 0.0);
+            continue;
            }
 
-         if(stoch_val <= 0 || stoch_val >= 100) {
-            switch(i){
-                case 0: PlotBuffer0[bar]=0;break; case 1: PlotBuffer1[bar]=0;break; case 2: PlotBuffer2[bar]=0;break;
-                case 3: PlotBuffer3[bar]=0;break; case 4: PlotBuffer4[bar]=0;break; case 5: PlotBuffer5[bar]=0;break;
-                case 6: PlotBuffer6[bar]=0;break; case 7: PlotBuffer7[bar]=0;break; case 8: PlotBuffer8[bar]=0;break;
-                case 9: PlotBuffer9[bar]=0;break; case 10: PlotBuffer10[bar]=0;break; case 11: PlotBuffer11[bar]=0;break;
-                case 12: PlotBuffer12[bar]=0;break; case 13: PlotBuffer13[bar]=0;break; case 14: PlotBuffer14[bar]=0;break;
-                case 15: PlotBuffer15[bar]=0;break; case 16: PlotBuffer16[bar]=0;break; case 17: PlotBuffer17[bar]=0;break;
-                case 18: PlotBuffer18[bar]=0;break;
-            }
-            continue;
-         }
-         
          // --- Select calculation type ---
          switch(in_calc_type)
            {
-            case CALC_NORMAL: {
-                switch(i){
-                    case 0: PlotBuffer0[bar]=stoch_val;break; case 1: PlotBuffer1[bar]=stoch_val;break; case 2: PlotBuffer2[bar]=stoch_val;break;
-                    case 3: PlotBuffer3[bar]=stoch_val;break; case 4: PlotBuffer4[bar]=stoch_val;break; case 5: PlotBuffer5[bar]=stoch_val;break;
-                    case 6: PlotBuffer6[bar]=stoch_val;break; case 7: PlotBuffer7[bar]=stoch_val;break; case 8: PlotBuffer8[bar]=stoch_val;break;
-                    case 9: PlotBuffer9[bar]=stoch_val;break; case 10: PlotBuffer10[bar]=stoch_val;break; case 11: PlotBuffer11[bar]=stoch_val;break;
-                    case 12: PlotBuffer12[bar]=stoch_val;break; case 13: PlotBuffer13[bar]=stoch_val;break; case 14: PlotBuffer14[bar]=stoch_val;break;
-                    case 15: PlotBuffer15[bar]=stoch_val;break; case 16: PlotBuffer16[bar]=stoch_val;break; case 17: PlotBuffer17[bar]=stoch_val;break;
-                    case 18: PlotBuffer18[bar]=stoch_val;break;
-                }
-                break;
-            }
-            // Other cases are complex and would require similar switch statements.
-            // For brevity, they are not fully expanded here.
-            default: {
-                switch(i){
-                    case 0: PlotBuffer0[bar]=stoch_val;break; case 1: PlotBuffer1[bar]=stoch_val;break; default: break;
-                }
-                break;
-            }
+            case CALC_NORMAL:
+              {
+               plot_value = current_stoch;
+               break;
+              }
+            case CALC_SUM:
+              {
+               double sum = 0.0;
+               double weight_sum = 0.0;
+               if(in_sum_type == SUM_FORWARD)
+                 {
+                  for(int j = i; j < g_buff_num; j++)
+                    {
+                     double stoch_val = current_stoch_values[j];
+                     if(stoch_val > 0.0)
+                       {
+                        sum += stoch_val;
+                        weight_sum += 1.0;
+                       }
+                    }
+                 }
+               else // SUM_BACKWARD
+                 {
+                  for(int j = 0; j <= i; j++)
+                    {
+                     double stoch_val = current_stoch_values[j];
+                     if(stoch_val > 0.0)
+                       {
+                        sum += stoch_val;
+                        weight_sum += 1.0;
+                       }
+                    }
+                 }
+               plot_value = (weight_sum > 0) ? (sum / weight_sum) : 0.0;
+               break;
+              }
+            case CALC_DIV:
+              {
+               if(bar < rates_total - 1)
+                 {
+                  double prev_stoch = GetStochValue(i, bar + 1);
+                  if(prev_stoch > 0.0)
+                    {
+                     double diff = current_stoch - prev_stoch;
+                     plot_value = (i + 1) * (i + 1) * diff; // Scale by (index+1)^2 to avoid multiplying by 0
+                    }
+                 }
+               break;
+              }
+            case CALC_SIGN:
+              {
+               if(bar < rates_total - 1)
+                 {
+                  double prev_stoch = GetStochValue(i, bar + 1);
+                  if(prev_stoch > 0.0)
+                    {
+                     double diff = current_stoch - prev_stoch;
+                     plot_value = ((diff > 0) ? 1 : -1) * (i + 1); // Use (i+1) to avoid multiplying by 0
+                    }
+                 }
+               break;
+              }
+            case CALC_DIV_SUM:
+              {
+               if(bar < rates_total - 1)
+                 {
+                  double sum_of_divs = 0.0;
+                  int count = 0;
+                  for(int j = i; j < g_buff_num; j++)
+                    {
+                     double stoch_curr = GetStochValue(j, bar);
+                     double stoch_prev = GetStochValue(j, bar + 1);
+                     if(stoch_curr > 0.0 && stoch_prev > 0.0)
+                       {
+                        sum_of_divs += (stoch_curr - stoch_prev);
+                        count++;
+                       }
+                    }
+                  if(count > 0)
+                    {
+                     plot_value = sum_of_divs / count;
+                    }
+                 }
+               break;
+              }
+            case CALC_MULT:
+              {
+               double product = 1.0;
+               for(int j = i; j < g_buff_num; j++)
+                 {
+                  double stoch_val = current_stoch_values[j];
+                  if(stoch_val > 0.0)
+                    {
+                     product *= (stoch_val / 100.0) / 0.5;
+                    }
+                 }
+               plot_value = (product > 0) ? MathLog10(product) : 0.0;
+               break;
+              }
+            // Other cases will be added here
+            default:
+              {
+               plot_value = 0.0; // Default to 0 if type is not implemented
+               break;
+              }
            }
+         SetPlotValue(i, bar, plot_value);
         }
      }
    return(rates_total);
