@@ -81,19 +81,30 @@ protected:
     double m_alpha;
     int    m_period;
 public:
-    void Init(int period) { m_period = period; m_alpha = 2.0 / (m_period + 1.0); }
+    void Init(int period) { m_period = period > 0 ? period : 1; m_alpha = 2.0 / (m_period + 1.0); }
     void Calculate(const int rates_total, const int prev_calculated, const double &in_series[], double &out_series[])
     {
-        int start_pos = (prev_calculated > 1) ? rates_total - prev_calculated : rates_total - 2;
+        if(prev_calculated == 0) ArrayInitialize(out_series, EMPTY_VALUE);
+
+        int start_pos = rates_total - 1;
+        if(prev_calculated > 0) start_pos = rates_total - prev_calculated;
         if (start_pos < 0) start_pos = 0;
 
-        if (prev_calculated == 0) {
-            if(rates_total > 0) out_series[rates_total - 1] = in_series[rates_total - 1];
-            for (int i = rates_total - 2; i >= 0; i--)
+        for (int i = start_pos; i >= 0; i--)
+        {
+            if (i == rates_total - 1) { // For the very first bar
+                out_series[i] = in_series[i];
+                continue;
+            }
+
+            if(in_series[i] == EMPTY_VALUE || out_series[i+1] == EMPTY_VALUE)
+            {
+                out_series[i] = EMPTY_VALUE;
+            }
+            else
+            {
                 out_series[i] = in_series[i] * m_alpha + out_series[i + 1] * (1.0 - m_alpha);
-        } else {
-            for (int i = start_pos; i >= 0; i--)
-                out_series[i] = in_series[i] * m_alpha + out_series[i + 1] * (1.0 - m_alpha);
+            }
         }
     }
 };
@@ -103,20 +114,36 @@ class CLWMACalculator
 protected:
     int m_period;
 public:
-    void Init(int period) { m_period = period; }
+    void Init(int period) { m_period = period > 0 ? period : 1; }
     void Calculate(const int rates_total, const int prev_calculated, const double &in_series[], double &out_series[])
     {
-        int start_pos = prev_calculated > 1 ? rates_total - prev_calculated -1 : rates_total - m_period;
-        if (start_pos >= rates_total) start_pos = rates_total -1;
+        if(prev_calculated == 0) ArrayInitialize(out_series, EMPTY_VALUE);
+
+        int start_pos = rates_total - 1;
+        if(prev_calculated > 0) start_pos = rates_total - prev_calculated;
+        if (start_pos < 0) start_pos = 0;
 
         for(int i = start_pos; i >= 0; i--) {
-            double sum_w = 0, sum = 0;
-            if(i > rates_total - m_period) continue;
-            for(int j = 0; j < m_period; j++) {
-                sum += (m_period - j) * in_series[i + j];
-                sum_w += (m_period - j);
+            if(i + m_period > rates_total) {
+                out_series[i] = EMPTY_VALUE;
+                continue;
             }
-            if (sum_w != 0) out_series[i] = sum / sum_w; else out_series[i] = 0;
+
+            double sum_w = 0, sum = 0;
+            int valid_count = 0;
+            for(int j = 0; j < m_period; j++) {
+                if(in_series[i+j] != EMPTY_VALUE) {
+                    sum += (m_period - j) * in_series[i + j];
+                    sum_w += (m_period - j);
+                    valid_count++;
+                }
+            }
+
+            if (valid_count == m_period && sum_w != 0) {
+                out_series[i] = sum / sum_w;
+            } else {
+                out_series[i] = EMPTY_VALUE;
+            }
         }
     }
 };
@@ -132,19 +159,35 @@ public:
         m_period = period > 0 ? period : 1;
         m_half_period = m_period / 2;
         m_sqrt_period = (int)MathSqrt(m_period);
-        m_lwma_half.Init(m_half_period);
+        m_lwma_half.Init(m_half_period > 0 ? m_half_period : 1);
         m_lwma_full.Init(m_period);
-        m_lwma_sqrt.Init(m_sqrt_period);
+        m_lwma_sqrt.Init(m_sqrt_period > 0 ? m_sqrt_period : 1);
     }
     void Calculate(const int rates_total, const int prev_calculated, const double &in_series[], double &out_series[]) {
         ArrayResize(m_wma_half, rates_total);
         ArrayResize(m_wma_full, rates_total);
         ArrayResize(m_temp_arr, rates_total);
+
+        if(prev_calculated == 0) {
+            ArrayInitialize(m_wma_half, EMPTY_VALUE);
+            ArrayInitialize(m_wma_full, EMPTY_VALUE);
+            ArrayInitialize(m_temp_arr, EMPTY_VALUE);
+            ArrayInitialize(out_series, EMPTY_VALUE);
+        }
+
         m_lwma_half.Calculate(rates_total, prev_calculated, in_series, m_wma_half);
         m_lwma_full.Calculate(rates_total, prev_calculated, in_series, m_wma_full);
-        int start_pos = prev_calculated > 1 ? rates_total - prev_calculated -1: 0;
-        for(int i = start_pos; i < rates_total; i++)
-            m_temp_arr[i] = 2 * m_wma_half[i] - m_wma_full[i];
+
+        int start_pos = rates_total - 1;
+        if(prev_calculated > 0) start_pos = rates_total - prev_calculated;
+        if(start_pos < 0) start_pos = 0;
+
+        for(int i = start_pos; i >= 0; i--) {
+            if(m_wma_half[i] == EMPTY_VALUE || m_wma_full[i] == EMPTY_VALUE)
+                m_temp_arr[i] = EMPTY_VALUE;
+            else
+                m_temp_arr[i] = 2 * m_wma_half[i] - m_wma_full[i];
+        }
         m_lwma_sqrt.Calculate(rates_total, prev_calculated, m_temp_arr, out_series);
     }
 };
@@ -163,11 +206,28 @@ public:
     }
     void Calculate(const int rates_total, const int prev_calculated, const double &in_series[], double &out_series[]) {
         ArrayResize(m_ema_arr, rates_total);
+        if(prev_calculated == 0) {
+            ArrayInitialize(m_ema_arr, EMPTY_VALUE);
+            ArrayInitialize(out_series, EMPTY_VALUE);
+        }
+
         m_ema.Calculate(rates_total, prev_calculated, in_series, m_ema_arr);
-        int start_pos = prev_calculated > 1 ? rates_total - prev_calculated -1 : 0;
-        for (int i = start_pos; i < rates_total - m_lag; i++)
-             if(i + m_lag < rates_total) // bounds check
+
+        int start_pos = rates_total - 1;
+        if(prev_calculated > 0) start_pos = rates_total - prev_calculated;
+        if(start_pos < 0) start_pos = 0;
+
+        for (int i = start_pos; i >= 0; i--) {
+             if(i + m_lag >= rates_total) { // bounds check
+                out_series[i] = EMPTY_VALUE;
+                continue;
+             }
+
+             if(m_ema_arr[i] == EMPTY_VALUE || in_series[i] == EMPTY_VALUE || m_ema_arr[i + m_lag] == EMPTY_VALUE)
+                out_series[i] = EMPTY_VALUE;
+             else
                 out_series[i] = m_ema_arr[i] + (in_series[i] - m_ema_arr[i + m_lag]);
+        }
     }
 };
 
