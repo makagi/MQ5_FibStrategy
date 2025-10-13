@@ -239,6 +239,7 @@ int OnInit()
    for(int i = 0; i < g_buff_num; i++)
      {
       PlotIndexSetString(i, PLOT_LABEL, "P" + (string)g_fibonacci[i]);
+      PlotIndexSetDouble(i, PLOT_EMPTY_VALUE, EMPTY_VALUE);
 
       if(i < g_display_start || i > g_display_end)
         {
@@ -470,12 +471,12 @@ int OnCalculate(const int rates_total,
 
       for(int i = g_display_start; i <= g_display_end; i++)
         {
-         double plot_value = 0.0;
+         double plot_value = EMPTY_VALUE;
          double current_stoch = current_stoch_values[i];
 
-         if(current_stoch <= 0.0)
+         if(current_stoch == EMPTY_VALUE)
            {
-            SetPlotValue(i, bar, 0.0);
+            SetPlotValue(i, bar, EMPTY_VALUE);
             continue;
            }
 
@@ -496,7 +497,7 @@ int OnCalculate(const int rates_total,
                   for(int j = i; j < g_buff_num; j++)
                     {
                      double stoch_val = current_stoch_values[j];
-                     if(stoch_val > 0.0)
+                     if(stoch_val != EMPTY_VALUE)
                        {
                         sum += stoch_val;
                         weight_sum += 1.0;
@@ -508,14 +509,14 @@ int OnCalculate(const int rates_total,
                   for(int j = 0; j <= i; j++)
                     {
                      double stoch_val = current_stoch_values[j];
-                     if(stoch_val > 0.0)
+                     if(stoch_val != EMPTY_VALUE)
                        {
                         sum += stoch_val;
                         weight_sum += 1.0;
                        }
                     }
                  }
-               plot_value = (weight_sum > 0) ? (sum / weight_sum) : 0.0;
+               if(weight_sum > 0) plot_value = sum / weight_sum;
                break;
               }
             case CALC_DIV:
@@ -523,7 +524,7 @@ int OnCalculate(const int rates_total,
                if(bar < rates_total - 1)
                  {
                   double prev_stoch = GetStochValue(i, bar + 1);
-                  if(prev_stoch > 0.0)
+                  if(prev_stoch != EMPTY_VALUE)
                     {
                      double diff = current_stoch - prev_stoch;
                      plot_value = (i + 1) * (i + 1) * diff; // Scale by (index+1)^2 to avoid multiplying by 0
@@ -536,7 +537,7 @@ int OnCalculate(const int rates_total,
                if(bar < rates_total - 1)
                  {
                   double prev_stoch = GetStochValue(i, bar + 1);
-                  if(prev_stoch > 0.0)
+                  if(prev_stoch != EMPTY_VALUE)
                     {
                      double diff = current_stoch - prev_stoch;
                      plot_value = ((diff > 0) ? 1 : -1) * (i + 1); // Use (i+1) to avoid multiplying by 0
@@ -554,7 +555,7 @@ int OnCalculate(const int rates_total,
                     {
                      double stoch_curr = GetStochValue(j, bar);
                      double stoch_prev = GetStochValue(j, bar + 1);
-                     if(stoch_curr > 0.0 && stoch_prev > 0.0)
+                     if(stoch_curr != EMPTY_VALUE && stoch_prev != EMPTY_VALUE)
                        {
                         sum_of_divs += (stoch_curr - stoch_prev);
                         count++;
@@ -573,12 +574,12 @@ int OnCalculate(const int rates_total,
                for(int j = i; j < g_buff_num; j++)
                  {
                   double stoch_val = current_stoch_values[j];
-                  if(stoch_val > 0.0)
+                  if(stoch_val != EMPTY_VALUE)
                     {
                      product *= (stoch_val / 100.0) / 0.5;
                     }
                  }
-               plot_value = (product > 0) ? MathLog10(product) : 0.0;
+               if(product > 0) plot_value = MathLog10(product);
                break;
               }
             // Other cases will be added here
@@ -599,22 +600,41 @@ int OnCalculate(const int rates_total,
 //+------------------------------------------------------------------+
 void SMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
 {
-    int start_pos;
-    if (prev_calculated == 0) {
-        double first_sum = 0;
-        if(rates_total < period) return;
-        for (int i = 0; i < period; i++) first_sum += in_series[rates_total - period + i];
-        out_series[rates_total - period] = first_sum / period;
-        start_pos = rates_total - period - 1;
-    } else {
-        start_pos = rates_total - prev_calculated -1;
-    }
-    if(start_pos >= rates_total) start_pos = rates_total -1;
-    if(start_pos < 0) return;
+    // On first run, initialize the whole array to EMPTY_VALUE
+    if(prev_calculated == 0)
+        ArrayInitialize(out_series, EMPTY_VALUE);
+
+    // Determine the starting position for calculation
+    int start_pos = rates_total - 1;
+    if(prev_calculated > 0)
+        start_pos = rates_total - prev_calculated;
+
+    if (start_pos < 0) start_pos = 0;
 
     for (int i = start_pos; i >= 0; i--)
-        if(i+period < rates_total) // bounds check
-            out_series[i] = out_series[i + 1] + (in_series[i] - in_series[i + period]) / period;
+    {
+        // Ensure there are enough bars for the calculation
+        if (i + period > rates_total) {
+            out_series[i] = EMPTY_VALUE;
+            continue;
+        }
+
+        double sum = 0;
+        int    count = 0;
+        for(int j = 0; j < period; j++) {
+            if(in_series[i + j] != EMPTY_VALUE) {
+                sum += in_series[i + j];
+                count++;
+            }
+        }
+
+        // Calculate the SMA only if we have a full period of valid data
+        if (count == period) {
+            out_series[i] = sum / period;
+        } else {
+            out_series[i] = EMPTY_VALUE;
+        }
+    }
 }
 
 void EMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
@@ -670,15 +690,28 @@ void CustomStochastic(int index, int k_period, int d_period, int slowing, ENUM_C
    double stoch_val[];
    ArrayResize(stoch_val, rates_total);
 
-   int start_pos = prev_calculated > 1 ? rates_total - prev_calculated -1 : rates_total - k_period;
+   // On first run, initialize the whole array to EMPTY_VALUE
+   if(prev_calculated == 0)
+      ArrayInitialize(stoch_val, EMPTY_VALUE);
+
+   // Determine the starting position for calculation
+   int start_pos = rates_total - 1;
+   if(prev_calculated > 0)
+      start_pos = rates_total - prev_calculated;
    if(start_pos < 0) start_pos = 0;
 
    for(int i = start_pos; i >= 0; i--)
      {
+      // Ensure there are enough bars for the calculation
+      if (i + k_period > rates_total) {
+          stoch_val[i] = EMPTY_VALUE;
+          continue;
+      }
+
       double hh = high[ArrayMaximum(high, i, k_period)];
       double ll = low[ArrayMinimum(low, i, k_period)];
       double den = hh - ll;
-      stoch_val[i] = (den != 0) ? 100.0 * (close[i] - ll) / den : 0;
+      stoch_val[i] = (den != 0) ? 100.0 * (close[i] - ll) / den : 0.0;
      }
 
    if(slowing > 1)
@@ -687,7 +720,9 @@ void CustomStochastic(int index, int k_period, int d_period, int slowing, ENUM_C
      }
    else
      {
-      ArrayCopy(k_buffer, stoch_val);
+      // If not slowing, copy stoch_val directly to k_buffer for the calculated range
+       for(int i = start_pos; i >= 0; i--)
+         k_buffer[i] = stoch_val[i];
      }
 
    MA_Calculate(index, rates_total, prev_calculated, d_period, k_buffer, d_buffer, ma_method);
