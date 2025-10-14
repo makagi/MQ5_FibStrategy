@@ -88,19 +88,6 @@ void CustomStochastic(int k_period, int d_period, int slowing, ENUM_CUSTOM_MA_ME
 //+------------------------------------------------------------------+
 //| MA Calculation Router                                            |
 //+------------------------------------------------------------------+
-void MA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[], ENUM_CUSTOM_MA_METHOD method)
-{
-    switch(method)
-    {
-        case CUSTOM_SMA:   SMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_EMA:   EMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_SMMA:  SMMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_LWMA:  LWMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_HMA:   HMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_ZLEMA: ZLEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_TEMA:  TEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-    }
-}
 
 //+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
@@ -361,11 +348,7 @@ int OnCalculate(const int rates_total,
          double current_stoch = current_stoch_values[i];
          double plot_value = EMPTY_VALUE;
 
-         if(current_stoch == EMPTY_VALUE)
-           {
-            // The plot value will be set to EMPTY_VALUE at the end, so just continue
-           }
-         else
+         if(current_stoch != EMPTY_VALUE)
            {
             // --- Select calculation type ---
             switch(in_calc_type)
