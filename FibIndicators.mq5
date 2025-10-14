@@ -86,6 +86,23 @@ void MA_Calculate(const int rates_total, const int prev_calculated, const int pe
 void CustomStochastic(int k_period, int d_period, int slowing, ENUM_CUSTOM_MA_METHOD ma_method, const int rates_total, const int prev_calculated, const double &high[], const double &low[], const double &close[], double &k_buffer[], double &d_buffer[]);
 
 //+------------------------------------------------------------------+
+//| MA Calculation Router                                            |
+//+------------------------------------------------------------------+
+void MA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[], ENUM_CUSTOM_MA_METHOD method)
+{
+    switch(method)
+    {
+        case CUSTOM_SMA:   SMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_EMA:   EMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_SMMA:  SMMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_LWMA:  LWMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_HMA:   HMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_ZLEMA: ZLEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_TEMA:  TEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+    }
+}
+
+//+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
 //+------------------------------------------------------------------+
 int OnInit()
@@ -335,94 +352,95 @@ int OnCalculate(const int rates_total,
            }
          else
            {
-            current_stoch_values[i] = 0.0;
+            current_stoch_values[i] = EMPTY_VALUE;
            }
         }
 
       for(int i = g_display_start; i <= g_display_end; i++)
         {
-         double plot_value = EMPTY_VALUE;
          double current_stoch = current_stoch_values[i];
+         double plot_value = EMPTY_VALUE;
 
          if(current_stoch == EMPTY_VALUE)
            {
-            PlotBuffer(i)[bar] = EMPTY_VALUE;
-            continue;
+            // The plot value will be set to EMPTY_VALUE at the end, so just continue
            }
-
-         // --- Select calculation type ---
-         switch(in_calc_type)
+         else
            {
-            case CALC_NORMAL:
+            // --- Select calculation type ---
+            switch(in_calc_type)
               {
-               if(current_stoch > 0.0 && current_stoch <= 100.0) plot_value = current_stoch;
-               break;
-              }
-            case CALC_SUM:
-              {
-               double sum = 0.0;
-               double weight_sum = 0.0;
-               if(in_sum_type == SUM_FORWARD) {
-                  for(int j = i; j < g_buff_num; j++) {
-                     double w = 1.0;
-                     weight_sum += w;
-                     double stochVal = current_stoch_values[j];
-                     if(stochVal > 0.0 && stochVal <= 100.0) sum += stochVal * w;
-                  }
-               } else {
-                  weight_sum = 1.0;
-                  for(int j = 0; j <= i; j++) {
-                     double stochVal = current_stoch_values[j];
-                     if(stochVal > 0.0 && stochVal <= 100.0) sum += stochVal / (i + 1.0);
-                  }
-               }
-               if(weight_sum > 0) plot_value = sum / weight_sum;
-               break;
-              }
-            case CALC_DIV:
-              {
-               if(bar < rates_total - 1) {
-                  double prev_stoch = GetStochValue(i, bar + 1);
-                  if(current_stoch != EMPTY_VALUE && prev_stoch != EMPTY_VALUE) {
-                     plot_value = i * i * (current_stoch - prev_stoch);
-                  }
-               }
-               break;
-              }
-            case CALC_SIGN:
-              {
-               if(bar < rates_total - 1) {
-                  double prev_stoch = GetStochValue(i, bar + 1);
-                  if(current_stoch > 0.0 && current_stoch <= 100.0 && prev_stoch > 0.0 && prev_stoch <= 100.0) {
-                     plot_value = (((current_stoch - prev_stoch) > 0) * 2 - 1) * i;
-                  }
-               }
-               break;
-              }
-            case CALC_DIV_SUM:
-              {
-               if(bar < rates_total - 1) {
-                  double sum_of_divs = 0.0;
-                  for(int j = i; j < g_buff_num; j++) {
-                     double stoch_curr = GetStochValue(j, bar);
-                     double stoch_prev = GetStochValue(j, bar + 1);
-                     if(stoch_curr > 0.0 && stoch_curr <= 100.0 && stoch_prev > 0.0 && stoch_prev <= 100.0) {
-                        sum_of_divs += (stoch_curr - stoch_prev) / (g_buff_num - i);
+               case CALC_NORMAL:
+                 {
+                  if(current_stoch > 0.0 && current_stoch <= 100.0) plot_value = current_stoch;
+                  break;
+                 }
+               case CALC_SUM:
+                 {
+                  double sum = 0.0;
+                  double weight_sum = 0.0;
+                  if(in_sum_type == SUM_FORWARD) {
+                     for(int j = i; j < g_buff_num; j++) {
+                        double w = 1.0;
+                        weight_sum += w;
+                        double stochVal = current_stoch_values[j];
+                        if(stochVal > 0.0 && stochVal <= 100.0) sum += stochVal * w;
+                     }
+                  } else {
+                     weight_sum = 1.0;
+                     for(int j = 0; j <= i; j++) {
+                        double stochVal = current_stoch_values[j];
+                        if(stochVal > 0.0 && stochVal <= 100.0) sum += stochVal / (i + 1.0);
                      }
                   }
-                  plot_value = sum_of_divs;
-               }
-               break;
-              }
-            case CALC_MULT:
-              {
-               double product = 1.0;
-               for(int j = i; j < g_buff_num; j++) {
-                  double stochVal = current_stoch_values[j];
-                  if(stochVal > 0.0 && stochVal <= 100.0) product *= (stochVal / 100.0) / 0.5;
-               }
-               if(product > 0) plot_value = MathLog10(product);
-               break;
+                  if(weight_sum > 0) plot_value = sum / weight_sum;
+                  break;
+                 }
+               case CALC_DIV:
+                 {
+                  if(bar < rates_total - 1) {
+                     double prev_stoch = GetStochValue(i, bar + 1);
+                     if(current_stoch != EMPTY_VALUE && prev_stoch != EMPTY_VALUE) {
+                        plot_value = i * i * (current_stoch - prev_stoch);
+                     }
+                  }
+                  break;
+                 }
+               case CALC_SIGN:
+                 {
+                  if(bar < rates_total - 1) {
+                     double prev_stoch = GetStochValue(i, bar + 1);
+                     if(current_stoch > 0.0 && current_stoch <= 100.0 && prev_stoch > 0.0 && prev_stoch <= 100.0) {
+                        plot_value = (((current_stoch - prev_stoch) > 0) * 2 - 1) * i;
+                     }
+                  }
+                  break;
+                 }
+               case CALC_DIV_SUM:
+                 {
+                  if(bar < rates_total - 1) {
+                     double sum_of_divs = 0.0;
+                     for(int j = i; j < g_buff_num; j++) {
+                        double stoch_curr = GetStochValue(j, bar);
+                        double stoch_prev = GetStochValue(j, bar + 1);
+                        if(stoch_curr > 0.0 && stoch_curr <= 100.0 && stoch_prev > 0.0 && stoch_prev <= 100.0) {
+                           sum_of_divs += (stoch_curr - stoch_prev) / (g_buff_num - i);
+                        }
+                     }
+                     plot_value = sum_of_divs;
+                  }
+                  break;
+                 }
+               case CALC_MULT:
+                 {
+                  double product = 1.0;
+                  for(int j = i; j < g_buff_num; j++) {
+                     double stochVal = current_stoch_values[j];
+                     if(stochVal > 0.0 && stochVal <= 100.0) product *= (stochVal / 100.0) / 0.5;
+                  }
+                  if(product > 0) plot_value = MathLog10(product);
+                  break;
+                 }
               }
            }
 
