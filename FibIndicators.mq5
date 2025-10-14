@@ -48,7 +48,8 @@ enum ENUM_CUSTOM_MA_METHOD
    CUSTOM_SMMA,    // Smoothed Moving Average
    CUSTOM_LWMA,    // Linear Weighted Moving Average
    CUSTOM_HMA,     // Hull Moving Average
-   CUSTOM_ZLEMA    // Zero-Lag Exponential Moving Average
+   CUSTOM_ZLEMA,   // Zero-Lag Exponential Moving Average
+   CUSTOM_TEMA     // Triple Exponential Moving Average
   };
 
 //--- User Inputs
@@ -72,175 +73,31 @@ double   PlotBuffer0[], PlotBuffer1[], PlotBuffer2[], PlotBuffer3[], PlotBuffer4
 double   StochBuffer0[], StochBuffer1[], StochBuffer2[], StochBuffer3[], StochBuffer4[], StochBuffer5[], StochBuffer6[], StochBuffer7[], StochBuffer8[], StochBuffer9[], StochBuffer10[], StochBuffer11[], StochBuffer12[], StochBuffer13[], StochBuffer14[], StochBuffer15[], StochBuffer16[], StochBuffer17[], StochBuffer18[];
 int      g_stoch_handles[19];
 
-//--- MA Calculator Classes ---
-class CLWMACalculator; // Forward declaration for HMA
-
-class CEMACalculator
-{
-protected:
-    double m_alpha;
-    int    m_period;
-public:
-    void Init(int period) { m_period = period > 0 ? period : 1; m_alpha = 2.0 / (m_period + 1.0); }
-    void Calculate(const int rates_total, const int prev_calculated, const double &in_series[], double &out_series[])
-    {
-        if(prev_calculated == 0) ArrayInitialize(out_series, EMPTY_VALUE);
-
-        int start_pos = rates_total - 1;
-        if(prev_calculated > 0) start_pos = rates_total - prev_calculated;
-        if (start_pos < 0) start_pos = 0;
-
-        for (int i = start_pos; i >= 0; i--)
-        {
-            if (i == rates_total - 1) { // For the very first bar
-                out_series[i] = in_series[i];
-                continue;
-            }
-
-            if(in_series[i] == EMPTY_VALUE || out_series[i+1] == EMPTY_VALUE)
-            {
-                out_series[i] = EMPTY_VALUE;
-            }
-            else
-            {
-                out_series[i] = in_series[i] * m_alpha + out_series[i + 1] * (1.0 - m_alpha);
-            }
-        }
-    }
-};
-
-class CLWMACalculator
-{
-protected:
-    int m_period;
-public:
-    void Init(int period) { m_period = period > 0 ? period : 1; }
-    void Calculate(const int rates_total, const int prev_calculated, const double &in_series[], double &out_series[])
-    {
-        if(prev_calculated == 0) ArrayInitialize(out_series, EMPTY_VALUE);
-
-        int start_pos = rates_total - 1;
-        if(prev_calculated > 0) start_pos = rates_total - prev_calculated;
-        if (start_pos < 0) start_pos = 0;
-
-        for(int i = start_pos; i >= 0; i--) {
-            if(i + m_period > rates_total) {
-                out_series[i] = EMPTY_VALUE;
-                continue;
-            }
-
-            double sum_w = 0, sum = 0;
-            int valid_count = 0;
-            for(int j = 0; j < m_period; j++) {
-                if(in_series[i+j] != EMPTY_VALUE) {
-                    sum += (m_period - j) * in_series[i + j];
-                    sum_w += (m_period - j);
-                    valid_count++;
-                }
-            }
-
-            if (valid_count == m_period && sum_w != 0) {
-                out_series[i] = sum / sum_w;
-            } else {
-                out_series[i] = EMPTY_VALUE;
-            }
-        }
-    }
-};
-
-class CHMACalculator
-{
-protected:
-    int m_period, m_half_period, m_sqrt_period;
-    CLWMACalculator m_lwma_half, m_lwma_full, m_lwma_sqrt;
-    double m_wma_half[], m_wma_full[], m_temp_arr[];
-public:
-    void Init(int period) {
-        m_period = period > 0 ? period : 1;
-        m_half_period = m_period / 2;
-        m_sqrt_period = (int)MathSqrt(m_period);
-        m_lwma_half.Init(m_half_period > 0 ? m_half_period : 1);
-        m_lwma_full.Init(m_period);
-        m_lwma_sqrt.Init(m_sqrt_period > 0 ? m_sqrt_period : 1);
-    }
-    void Calculate(const int rates_total, const int prev_calculated, const double &in_series[], double &out_series[]) {
-        ArrayResize(m_wma_half, rates_total);
-        ArrayResize(m_wma_full, rates_total);
-        ArrayResize(m_temp_arr, rates_total);
-
-        if(prev_calculated == 0) {
-            ArrayInitialize(m_wma_half, EMPTY_VALUE);
-            ArrayInitialize(m_wma_full, EMPTY_VALUE);
-            ArrayInitialize(m_temp_arr, EMPTY_VALUE);
-            ArrayInitialize(out_series, EMPTY_VALUE);
-        }
-
-        m_lwma_half.Calculate(rates_total, prev_calculated, in_series, m_wma_half);
-        m_lwma_full.Calculate(rates_total, prev_calculated, in_series, m_wma_full);
-
-        int start_pos = rates_total - 1;
-        if(prev_calculated > 0) start_pos = rates_total - prev_calculated;
-        if(start_pos < 0) start_pos = 0;
-
-        for(int i = start_pos; i >= 0; i--) {
-            if(m_wma_half[i] == EMPTY_VALUE || m_wma_full[i] == EMPTY_VALUE)
-                m_temp_arr[i] = EMPTY_VALUE;
-            else
-                m_temp_arr[i] = 2 * m_wma_half[i] - m_wma_full[i];
-        }
-        m_lwma_sqrt.Calculate(rates_total, prev_calculated, m_temp_arr, out_series);
-    }
-};
-
-class CZLEMACalculator
-{
-protected:
-    int m_period, m_lag;
-    CEMACalculator m_ema;
-    double m_ema_arr[];
-public:
-    void Init(int period) {
-        m_period = period > 0 ? period : 1;
-        m_lag = (m_period - 1) / 2;
-        m_ema.Init(m_period);
-    }
-    void Calculate(const int rates_total, const int prev_calculated, const double &in_series[], double &out_series[]) {
-        ArrayResize(m_ema_arr, rates_total);
-        if(prev_calculated == 0) {
-            ArrayInitialize(m_ema_arr, EMPTY_VALUE);
-            ArrayInitialize(out_series, EMPTY_VALUE);
-        }
-
-        m_ema.Calculate(rates_total, prev_calculated, in_series, m_ema_arr);
-
-        int start_pos = rates_total - 1;
-        if(prev_calculated > 0) start_pos = rates_total - prev_calculated;
-        if(start_pos < 0) start_pos = 0;
-
-        for (int i = start_pos; i >= 0; i--) {
-             if(i + m_lag >= rates_total) { // bounds check
-                out_series[i] = EMPTY_VALUE;
-                continue;
-             }
-
-             if(m_ema_arr[i] == EMPTY_VALUE || in_series[i] == EMPTY_VALUE || m_ema_arr[i + m_lag] == EMPTY_VALUE)
-                out_series[i] = EMPTY_VALUE;
-             else
-                out_series[i] = m_ema_arr[i] + (in_series[i] - m_ema_arr[i + m_lag]);
-        }
-    }
-};
-
-CHMACalculator g_hma_calculators[19];
-CZLEMACalculator g_zlema_calculators[19];
 
 //--- Forward Declarations for Optimized MA calculations
 void SMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
 void EMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
 void LWMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
 void SMMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
-void MA_Calculate(int index, const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[], ENUM_CUSTOM_MA_METHOD method);
-void CustomStochastic(int index, int k_period, int d_period, int slowing, ENUM_CUSTOM_MA_METHOD ma_method, const int rates_total, const int prev_calculated, const double &high[], const double &low[], const double &close[], double &k_buffer[], double &d_buffer[]);
+void HMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
+void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
+void TEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
+void MA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[], ENUM_CUSTOM_MA_METHOD method);
+void CustomStochastic(int k_period, int d_period, int slowing, ENUM_CUSTOM_MA_METHOD ma_method, const int rates_total, const int prev_calculated, const double &high[], const double &low[], const double &close[], double &k_buffer[], double &d_buffer[]);
+
+void MA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[], ENUM_CUSTOM_MA_METHOD method)
+{
+    switch(method)
+    {
+        case CUSTOM_SMA:   SMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_EMA:   EMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_SMMA:  SMMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_LWMA:  LWMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_HMA:   HMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_ZLEMA: ZLEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_TEMA:  TEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+    }
+}
 
 //+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
@@ -346,7 +203,7 @@ int OnInit()
       PlotIndexSetInteger(i, PLOT_LINE_WIDTH, width);
      }
 
-//--- Initialize indicator handles and calculators
+//--- Initialize indicator handles
    for(int i = 0; i < g_buff_num; i++)
      {
       if(in_ma_method < CUSTOM_HMA) // Standard MAs
@@ -356,10 +213,6 @@ int OnInit()
       else // Custom MAs
         {
          g_stoch_handles[i] = -1;
-         if(in_ma_method == CUSTOM_HMA)
-            g_hma_calculators[i].Init(g_fibonacci[i]);
-         if(in_ma_method == CUSTOM_ZLEMA)
-            g_zlema_calculators[i].Init(g_fibonacci[i]);
         }
      }
 
@@ -395,6 +248,36 @@ double GetStochValue(int index, int bar)
       case 18: return StochBuffer18[bar];
       default: return 0.0;
      }
+  }
+
+//+------------------------------------------------------------------+
+//| Helper function to get a reference to the correct Plot buffer    |
+//+------------------------------------------------------------------+
+double& GetPlotBuffer(int index)
+  {
+   switch(index)
+     {
+      case 0: return PlotBuffer0;
+      case 1: return PlotBuffer1;
+      case 2: return PlotBuffer2;
+      case 3: return PlotBuffer3;
+      case 4: return PlotBuffer4;
+      case 5: return PlotBuffer5;
+      case 6: return PlotBuffer6;
+      case 7: return PlotBuffer7;
+      case 8: return PlotBuffer8;
+      case 9: return PlotBuffer9;
+      case 10: return PlotBuffer10;
+      case 11: return PlotBuffer11;
+      case 12: return PlotBuffer12;
+      case 13: return PlotBuffer13;
+      case 14: return PlotBuffer14;
+      case 15: return PlotBuffer15;
+      case 16: return PlotBuffer16;
+      case 17: return PlotBuffer17;
+      case 18: return PlotBuffer18;
+     }
+   return PlotBuffer0; // Should not happen
   }
 
 //+------------------------------------------------------------------+
@@ -452,7 +335,7 @@ int OnCalculate(const int rates_total,
          double k_buffer[], d_buffer[];
          ArrayResize(k_buffer, rates_total);
          ArrayResize(d_buffer, rates_total);
-         CustomStochastic(i, g_fibonacci[i], g_fibonacci[i], in_slowing, in_ma_method, rates_total, prev_calculated, high, low, close, k_buffer, d_buffer);
+         CustomStochastic(g_fibonacci[i], g_fibonacci[i], in_slowing, in_ma_method, rates_total, prev_calculated, high, low, close, k_buffer, d_buffer);
 
          if(in_kd_type == KD_MAIN)
            {
@@ -541,208 +424,219 @@ int OnCalculate(const int rates_total,
            }
 
          // --- Select calculation type ---
+         double &plot_buffer = GetPlotBuffer(i);
          switch(in_calc_type)
            {
-            case CALC_NORMAL:
-              {
-               plot_value = current_stoch;
-               break;
-              }
-            case CALC_SUM:
-              {
-               double sum = 0.0;
-               double weight_sum = 0.0;
-               if(in_sum_type == SUM_FORWARD)
-                 {
-                  for(int j = i; j < g_buff_num; j++)
-                    {
-                     double stoch_val = current_stoch_values[j];
-                     if(stoch_val != EMPTY_VALUE)
-                       {
-                        sum += stoch_val;
-                        weight_sum += 1.0;
-                       }
-                    }
-                 }
-               else // SUM_BACKWARD
-                 {
-                  for(int j = 0; j <= i; j++)
-                    {
-                     double stoch_val = current_stoch_values[j];
-                     if(stoch_val != EMPTY_VALUE)
-                       {
-                        sum += stoch_val;
-                        weight_sum += 1.0;
-                       }
-                    }
-                 }
-               if(weight_sum > 0) plot_value = sum / weight_sum;
-               break;
-              }
-            case CALC_DIV:
-              {
-               if(bar < rates_total - 1)
-                 {
-                  double prev_stoch = GetStochValue(i, bar + 1);
-                  if(prev_stoch != EMPTY_VALUE)
-                    {
-                     double diff = current_stoch - prev_stoch;
-                     plot_value = (i + 1) * (i + 1) * diff; // Scale by (index+1)^2 to avoid multiplying by 0
-                    }
-                 }
-               break;
-              }
-            case CALC_SIGN:
-              {
-               if(bar < rates_total - 1)
-                 {
-                  double prev_stoch = GetStochValue(i, bar + 1);
-                  if(prev_stoch != EMPTY_VALUE)
-                    {
-                     double diff = current_stoch - prev_stoch;
-                     plot_value = ((diff > 0) ? 1 : -1) * (i + 1); // Use (i+1) to avoid multiplying by 0
-                    }
-                 }
-               break;
-              }
-            case CALC_DIV_SUM:
-              {
-               if(bar < rates_total - 1)
-                 {
-                  double sum_of_divs = 0.0;
-                  int count = 0;
-                  for(int j = i; j < g_buff_num; j++)
-                    {
-                     double stoch_curr = GetStochValue(j, bar);
-                     double stoch_prev = GetStochValue(j, bar + 1);
-                     if(stoch_curr != EMPTY_VALUE && stoch_prev != EMPTY_VALUE)
-                       {
-                        sum_of_divs += (stoch_curr - stoch_prev);
-                        count++;
-                       }
-                    }
-                  if(count > 0)
-                    {
-                     plot_value = sum_of_divs / count;
-                    }
-                 }
-               break;
-              }
-            case CALC_MULT:
-              {
-               double product = 1.0;
-               for(int j = i; j < g_buff_num; j++)
-                 {
-                  double stoch_val = current_stoch_values[j];
-                  if(stoch_val != EMPTY_VALUE)
-                    {
-                     product *= (stoch_val / 100.0) / 0.5;
-                    }
-                 }
-               if(product > 0) plot_value = MathLog10(product);
-               break;
-              }
-            // Other cases will be added here
-            default:
-              {
-               plot_value = 0.0; // Default to 0 if type is not implemented
-               break;
-              }
+            case CALC_NORMAL:  CalcPlotBufferNormal(i, bar, rates_total, current_stoch_values, plot_buffer); break;
+            case CALC_SUM:     CalcPlotBufferSum(i, bar, rates_total, current_stoch_values, plot_buffer); break;
+            case CALC_DIV:     CalcPlotBufferDiv(i, bar, rates_total, current_stoch_values, plot_buffer); break;
+            case CALC_SIGN:    CalcPlotBufferSign(i, bar, rates_total, current_stoch_values, plot_buffer); break;
+            case CALC_DIV_SUM: CalcPlotBufferDivSum(i, bar, rates_total, current_stoch_values, plot_buffer); break;
+            case CALC_MULT:    CalcPlotBufferMult(i, bar, rates_total, current_stoch_values, plot_buffer); break;
+            default:           plot_buffer[bar] = EMPTY_VALUE; break;
            }
-         SetPlotValue(i, bar, plot_value);
         }
      }
    return(rates_total);
   }
 
 //+------------------------------------------------------------------+
+//| Calculation Helper Functions                                     |
+//+------------------------------------------------------------------+
+int CalcPlotBufferNormal(int index, int bar, int rates_total, const double &stoch_values[], double &plot_buffer[]) {
+    double val = stoch_values[index];
+    if(val > 0.0 && val <= 100.0) plot_buffer[bar] = val;
+    else plot_buffer[bar] = EMPTY_VALUE;
+    return(INIT_SUCCEEDED);
+}
+
+int CalcPlotBufferSum(int index, int bar, int rates_total, const double &stoch_values[], double &plot_buffer[]) {
+    double val = 0.0;
+    double w_sum = 0.0;
+
+    if(in_sum_type == SUM_FORWARD) { // Original SumType == 0
+        for(int i = index; i < g_buff_num; i++) {
+            double w = 1.0;
+            w_sum += w;
+            double stochVal = stoch_values[i];
+            if(stochVal > 0.0 && stochVal <= 100.0) val += stochVal * w;
+        }
+    } else { // Original SumType != 0 (SUM_BACKWARD)
+        w_sum = 1.0;
+        for(int i = 0; i <= index; i++) {
+            double stochVal = stoch_values[i];
+            if(stochVal > 0.0 && stochVal <= 100.0) val += stochVal / (index + 1);
+        }
+    }
+
+    plot_buffer[bar] = (w_sum > 0) ? (val / w_sum) : EMPTY_VALUE;
+    return(INIT_SUCCEEDED);
+}
+
+int CalcPlotBufferDiv(int index, int bar, int rates_total, const double &stoch_values[], double &plot_buffer[]) {
+    if(bar < rates_total - 1) {
+        double current_stoch = stoch_values[index];
+        double prev_stoch = GetStochValue(index, bar + 1); // Get previous bar's value
+        if(current_stoch != EMPTY_VALUE && prev_stoch != EMPTY_VALUE) {
+            double val = current_stoch - prev_stoch;
+            plot_buffer[bar] = index * index * val;
+        } else {
+            plot_buffer[bar] = EMPTY_VALUE;
+        }
+    } else {
+        plot_buffer[bar] = EMPTY_VALUE;
+    }
+    return(INIT_SUCCEEDED);
+}
+
+int CalcPlotBufferSign(int index, int bar, int rates_total, const double &stoch_values[], double &plot_buffer[]) {
+    double val = 0.0;
+    if(bar < rates_total - 1) {
+        double stochVal = stoch_values[index];
+        double prevStochVal = GetStochValue(index, bar + 1);
+        if(stochVal > 0.0 && stochVal <= 100.0 && prevStochVal > 0.0 && prevStochVal <= 100.0) {
+            val = (((stochVal - prevStochVal) > 0) * 2 - 1) * index;
+        }
+    }
+    plot_buffer[bar] = (val != 0.0) ? val : EMPTY_VALUE;
+    return(INIT_SUCCEEDED);
+}
+
+int CalcPlotBufferDivSum(int index, int bar, int rates_total, const double &stoch_values[], double &plot_buffer[]) {
+    double val = 0.0;
+    if(bar < rates_total - 1) {
+        for(int i = index; i < g_buff_num; i++) {
+            double stochCurr = GetStochValue(i, bar);
+            double stochPrev = GetStochValue(i, bar + 1);
+            if(stochCurr > 0.0 && stochCurr <= 100.0 && stochPrev > 0.0 && stochPrev <= 100.0) {
+                double div = stochCurr - stochPrev;
+                val += div / (g_buff_num - index);
+            }
+        }
+    }
+    plot_buffer[bar] = (val != 0.0) ? val : EMPTY_VALUE;
+    return(INIT_SUCCEEDED);
+}
+
+int CalcPlotBufferMult(int index, int bar, int rates_total, const double &stoch_values[], double &plot_buffer[]) {
+    double val = 1.0;
+    for(int i = index; i < g_buff_num; i++) {
+        double stochVal = stoch_values[i];
+        if(stochVal > 0.0 && stochVal <= 100.0) val *= (stochVal / 100.0) / 0.5;
+    }
+    plot_buffer[bar] = (val > 0) ? MathLog10(val) : EMPTY_VALUE;
+    return(INIT_SUCCEEDED);
+}
+
+//+------------------------------------------------------------------+
 //| Optimized MA Implementations                                     |
 //+------------------------------------------------------------------+
 void SMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
 {
-    // On first run, initialize the whole array to EMPTY_VALUE
-    if(prev_calculated == 0)
-        ArrayInitialize(out_series, EMPTY_VALUE);
+    SimpleMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, out_series);
+}
 
-    // Determine the starting position for calculation
-    int start_pos = rates_total - 1;
-    if(prev_calculated > 0)
-        start_pos = rates_total - prev_calculated;
+void EMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
+{
+    ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, out_series);
+}
 
-    if (start_pos < 0) start_pos = 0;
+void LWMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
+{
+    LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, out_series);
+}
 
-    for (int i = start_pos; i >= 0; i--)
-    {
-        // Ensure there are enough bars for the calculation
-        if (i + period > rates_total) {
+void SMMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
+{
+    SmoothedMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, out_series);
+}
+
+void HMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]) {
+   if(period < 2) return;
+
+   int half_period = period / 2 > 0 ? period / 2 : 1;
+   int sqrt_period = (int)MathRound(MathSqrt(period));
+   if(sqrt_period < 1) sqrt_period = 1;
+
+   double lwma_half_buffer[], lwma_full_buffer[], intermediate_buffer[];
+   ArrayResize(lwma_half_buffer, rates_total);
+   ArrayResize(lwma_full_buffer, rates_total);
+   ArrayResize(intermediate_buffer, rates_total);
+
+   if(prev_calculated == 0) {
+      ArrayInitialize(lwma_half_buffer, EMPTY_VALUE);
+      ArrayInitialize(lwma_full_buffer, EMPTY_VALUE);
+      ArrayInitialize(intermediate_buffer, EMPTY_VALUE);
+   }
+
+   LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, half_period, in_series, lwma_half_buffer);
+   LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, lwma_full_buffer);
+
+   int start_pos = (prev_calculated > 1) ? rates_total - prev_calculated -1 : 0;
+   for(int i = start_pos; i < rates_total; i++) {
+      if(lwma_half_buffer[i] != EMPTY_VALUE && lwma_full_buffer[i] != EMPTY_VALUE)
+         intermediate_buffer[i] = 2 * lwma_half_buffer[i] - lwma_full_buffer[i];
+      else
+         intermediate_buffer[i] = EMPTY_VALUE;
+   }
+
+   LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, sqrt_period, intermediate_buffer, out_series);
+}
+
+void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]) {
+    if(period <= 0) return;
+    int lag = (period - 1) / 2;
+    double ema_arr[];
+    ArrayResize(ema_arr, rates_total);
+    if(prev_calculated == 0) ArrayInitialize(ema_arr, EMPTY_VALUE);
+
+    ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, ema_arr);
+
+    int start_pos = (prev_calculated > 1) ? rates_total - prev_calculated -1 : 0;
+    for(int i = start_pos; i < rates_total; i++) {
+        if (i + lag >= rates_total) {
             out_series[i] = EMPTY_VALUE;
             continue;
         }
-
-        double sum = 0;
-        int    count = 0;
-        for(int j = 0; j < period; j++) {
-            if(in_series[i + j] != EMPTY_VALUE) {
-                sum += in_series[i + j];
-                count++;
-            }
-        }
-
-        // Calculate the SMA only if we have a full period of valid data
-        if (count == period) {
-            out_series[i] = sum / period;
+        if (ema_arr[i] != EMPTY_VALUE && in_series[i] != EMPTY_VALUE && ema_arr[i + lag] != EMPTY_VALUE) {
+            out_series[i] = ema_arr[i] + (in_series[i] - ema_arr[i + lag]);
         } else {
             out_series[i] = EMPTY_VALUE;
         }
     }
 }
 
-void EMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
-{
-    CEMACalculator ema;
-    ema.Init(period);
-    ema.Calculate(rates_total, prev_calculated, in_series, out_series);
-}
+void TEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]) {
+   if(period < 2) return;
 
-void LWMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
-{
-    CLWMACalculator lwma;
-    lwma.Init(period);
-    lwma.Calculate(rates_total, prev_calculated, in_series, out_series);
-}
+   double ema1[], ema2[], ema3[];
+   ArrayResize(ema1, rates_total);
+   ArrayResize(ema2, rates_total);
+   ArrayResize(ema3, rates_total);
 
-void SMMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
-{
-    int start_pos = prev_calculated > 1 ? rates_total - prev_calculated : rates_total - 2;
-    if (start_pos < 0) start_pos = 0;
+   if(prev_calculated == 0) {
+      ArrayInitialize(ema1, EMPTY_VALUE);
+      ArrayInitialize(ema2, EMPTY_VALUE);
+      ArrayInitialize(ema3, EMPTY_VALUE);
+   }
 
-    if (prev_calculated == 0) {
-        if(rates_total>0) out_series[rates_total - 1] = in_series[rates_total - 1];
-        for (int i = rates_total - 2; i >= 0; i--)
-            out_series[i] = (out_series[i + 1] * (period - 1) + in_series[i]) / period;
-    } else {
-        for (int i = start_pos; i >= 0; i--)
-            out_series[i] = (out_series[i + 1] * (period - 1) + in_series[i]) / period;
-    }
-}
+   ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, ema1);
+   ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, ema1, ema2);
+   ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, ema2, ema3);
 
-void MA_Calculate(int index, const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[], ENUM_CUSTOM_MA_METHOD method)
-{
-    switch(method)
-    {
-        case CUSTOM_SMA:   SMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_EMA:   EMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_SMMA:  SMMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_LWMA:  LWMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_HMA:   g_hma_calculators[index].Calculate(rates_total, prev_calculated, in_series, out_series); break;
-        case CUSTOM_ZLEMA: g_zlema_calculators[index].Calculate(rates_total, prev_calculated, in_series, out_series); break;
-    }
+   int start_pos = (prev_calculated > 1) ? rates_total - prev_calculated -1 : 0;
+   for(int i = start_pos; i < rates_total; i++) {
+      if(ema1[i] != EMPTY_VALUE && ema2[i] != EMPTY_VALUE && ema3[i] != EMPTY_VALUE)
+         out_series[i] = 3 * ema1[i] - 3 * ema2[i] + ema3[i];
+      else
+         out_series[i] = EMPTY_VALUE;
+   }
 }
 
 //+------------------------------------------------------------------+
 //| Custom Stochastic Calculation                                    |
 //+------------------------------------------------------------------+
-void CustomStochastic(int index, int k_period, int d_period, int slowing, ENUM_CUSTOM_MA_METHOD ma_method,
+void CustomStochastic(int k_period, int d_period, int slowing, ENUM_CUSTOM_MA_METHOD ma_method,
                       const int rates_total, const int prev_calculated, const double &high[], const double &low[], const double &close[],
                       double &k_buffer[], double &d_buffer[])
   {
@@ -785,6 +679,6 @@ void CustomStochastic(int index, int k_period, int d_period, int slowing, ENUM_C
          k_buffer[i] = stoch_val[i];
      }
 
-   MA_Calculate(index, rates_total, prev_calculated, d_period, k_buffer, d_buffer, ma_method);
+   MA_Calculate(rates_total, prev_calculated, d_period, k_buffer, d_buffer, ma_method);
   }
 //+------------------------------------------------------------------+
