@@ -444,7 +444,37 @@ int OnCalculate(const int rates_total,
 //+------------------------------------------------------------------+
 void SMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
 {
-    SimpleMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, out_series);
+    if(prev_calculated == 0)
+        ArrayInitialize(out_series, EMPTY_VALUE);
+
+    int start_pos = rates_total - 1;
+    if(prev_calculated > 0)
+        start_pos = rates_total - prev_calculated;
+
+    if (start_pos < 0) start_pos = 0;
+
+    for (int i = start_pos; i >= 0; i--)
+    {
+        if (i + period > rates_total) {
+            out_series[i] = EMPTY_VALUE;
+            continue;
+        }
+
+        double sum = 0;
+        int    count = 0;
+        for(int j = 0; j < period; j++) {
+            if(in_series[i + j] != EMPTY_VALUE) {
+                sum += in_series[i + j];
+                count++;
+            }
+        }
+
+        if (count == period) {
+            out_series[i] = sum / period;
+        } else {
+            out_series[i] = EMPTY_VALUE;
+        }
+    }
 }
 
 void EMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
