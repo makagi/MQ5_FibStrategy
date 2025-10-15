@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2024, MetaQuotes Software Corp."
 #property link      "https://www.mql5.com"
-#property version   "14.0"
+#property version   "15.0"
 #property description "Refactored Fibonacci Stochastic Indicator with all fixes and full implementation"
 
 #property indicator_separate_window
@@ -479,17 +479,24 @@ void SMA_Calculate(const int rates_total, const int prev_calculated, const int p
 
 void EMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
 {
-    ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, out_series);
+    // Using iMAOnArray for efficiency and correctness
+    if(ArrayIsDynamic(out_series)) ArraySetAsSeries(out_series, false);
+    iMAOnArray(in_series, rates_total, period, 0, MODE_EMA, out_series);
+    if(ArrayIsDynamic(out_series)) ArraySetAsSeries(out_series, true);
 }
 
 void LWMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
 {
-    LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, out_series);
+    if(ArrayIsDynamic(out_series)) ArraySetAsSeries(out_series, false);
+    iMAOnArray(in_series, rates_total, period, 0, MODE_LWMA, out_series);
+    if(ArrayIsDynamic(out_series)) ArraySetAsSeries(out_series, true);
 }
 
 void SMMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
 {
-    SmoothedMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, out_series);
+    if(ArrayIsDynamic(out_series)) ArraySetAsSeries(out_series, false);
+    iMAOnArray(in_series, rates_total, period, 0, MODE_SMMA, out_series);
+    if(ArrayIsDynamic(out_series)) ArraySetAsSeries(out_series, true);
 }
 
 void HMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]) {
@@ -504,26 +511,17 @@ void HMA_Calculate(const int rates_total, const int prev_calculated, const int p
    ArrayResize(lwma_full_buffer, rates_total);
    ArrayResize(intermediate_buffer, rates_total);
 
-   if(prev_calculated == 0) {
-      ArrayInitialize(lwma_half_buffer, EMPTY_VALUE);
-      ArrayInitialize(lwma_full_buffer, EMPTY_VALUE);
-      ArrayInitialize(intermediate_buffer, EMPTY_VALUE);
-   }
+   iMAOnArray(in_series, rates_total, half_period, 0, MODE_LWMA, lwma_half_buffer);
+   iMAOnArray(in_series, rates_total, period, 0, MODE_LWMA, lwma_full_buffer);
 
-   LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, half_period, in_series, lwma_half_buffer);
-   LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, lwma_full_buffer);
-
-   int start_pos = (prev_calculated > 1) ? rates_total - prev_calculated - 1 : period - 1;
-   if(start_pos < 0) start_pos = 0;
-
-   for(int i = start_pos; i < rates_total; i++) {
+   for(int i = 0; i < rates_total; i++) {
       if(lwma_half_buffer[i] != EMPTY_VALUE && lwma_full_buffer[i] != EMPTY_VALUE)
          intermediate_buffer[i] = 2 * lwma_half_buffer[i] - lwma_full_buffer[i];
       else
          intermediate_buffer[i] = EMPTY_VALUE;
    }
 
-   LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, sqrt_period, intermediate_buffer, out_series);
+   iMAOnArray(intermediate_buffer, rates_total, sqrt_period, 0, MODE_LWMA, out_series);
 }
 
 void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]) {
@@ -531,19 +529,13 @@ void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int
     int lag = (period - 1) / 2;
     double ema_arr[];
     ArrayResize(ema_arr, rates_total);
-    if(prev_calculated == 0) ArrayInitialize(ema_arr, EMPTY_VALUE);
 
-    ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, ema_arr);
+    iMAOnArray(in_series, rates_total, period, 0, MODE_EMA, ema_arr);
 
-    int start_pos = (prev_calculated > 1) ? rates_total - prev_calculated - 1 : period - 1;
-    if(start_pos < 0) start_pos = 0;
-
-    for(int i = start_pos; i < rates_total; i++) {
+    for(int i = 0; i < rates_total; i++) {
         if (i + lag >= rates_total) {
             out_series[i] = EMPTY_VALUE;
-            continue;
-        }
-        if (ema_arr[i] != EMPTY_VALUE && in_series[i] != EMPTY_VALUE && ema_arr[i + lag] != EMPTY_VALUE) {
+        } else if (ema_arr[i] != EMPTY_VALUE && in_series[i] != EMPTY_VALUE && ema_arr[i + lag] != EMPTY_VALUE) {
             out_series[i] = ema_arr[i] + (in_series[i] - ema_arr[i + lag]);
         } else {
             out_series[i] = EMPTY_VALUE;
@@ -559,20 +551,11 @@ void TEMA_Calculate(const int rates_total, const int prev_calculated, const int 
    ArrayResize(ema2, rates_total);
    ArrayResize(ema3, rates_total);
 
-   if(prev_calculated == 0) {
-      ArrayInitialize(ema1, EMPTY_VALUE);
-      ArrayInitialize(ema2, EMPTY_VALUE);
-      ArrayInitialize(ema3, EMPTY_VALUE);
-   }
+   iMAOnArray(in_series, rates_total, period, 0, MODE_EMA, ema1);
+   iMAOnArray(ema1, rates_total, period, 0, MODE_EMA, ema2);
+   iMAOnArray(ema2, rates_total, period, 0, MODE_EMA, ema3);
 
-   ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, ema1);
-   ExponentialMAOnBuffer(rates_total, prev_calculated, period - 1, period, ema1, ema2);
-   ExponentialMAOnBuffer(rates_total, prev_calculated, 2 * period - 2, period, ema2, ema3);
-
-   int start_pos = (prev_calculated > 1) ? rates_total - prev_calculated - 1 : 2 * period - 2;
-   if(start_pos < 0) start_pos = 0;
-
-   for(int i = start_pos; i < rates_total; i++) {
+   for(int i = 0; i < rates_total; i++) {
       if(ema1[i] != EMPTY_VALUE && ema2[i] != EMPTY_VALUE && ema3[i] != EMPTY_VALUE)
          out_series[i] = 3 * ema1[i] - 3 * ema2[i] + ema3[i];
       else
