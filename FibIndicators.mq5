@@ -483,7 +483,9 @@ void HMA_Calculate(const int rates_total, const int prev_calculated, const int p
    LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, half_period, in_series, lwma_half_buffer);
    LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, lwma_full_buffer);
 
-   int start_pos = (prev_calculated > 1) ? rates_total - prev_calculated -1 : 0;
+   int start_pos = (prev_calculated > 1) ? rates_total - prev_calculated - 1 : period - 1;
+   if(start_pos < 0) start_pos = 0;
+
    for(int i = start_pos; i < rates_total; i++) {
       if(lwma_half_buffer[i] != EMPTY_VALUE && lwma_full_buffer[i] != EMPTY_VALUE)
          intermediate_buffer[i] = 2 * lwma_half_buffer[i] - lwma_full_buffer[i];
@@ -503,7 +505,9 @@ void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int
 
     ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, ema_arr);
 
-    int start_pos = (prev_calculated > 1) ? rates_total - prev_calculated -1 : 0;
+    int start_pos = (prev_calculated > 1) ? rates_total - prev_calculated - 1 : period - 1;
+    if(start_pos < 0) start_pos = 0;
+
     for(int i = start_pos; i < rates_total; i++) {
         if (i + lag >= rates_total) {
             out_series[i] = EMPTY_VALUE;
@@ -532,10 +536,12 @@ void TEMA_Calculate(const int rates_total, const int prev_calculated, const int 
    }
 
    ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, ema1);
-   ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, ema1, ema2);
-   ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, ema2, ema3);
+   ExponentialMAOnBuffer(rates_total, prev_calculated, period - 1, period, ema1, ema2);
+   ExponentialMAOnBuffer(rates_total, prev_calculated, 2 * period - 2, period, ema2, ema3);
 
-   int start_pos = (prev_calculated > 1) ? rates_total - prev_calculated -1 : 0;
+   int start_pos = (prev_calculated > 1) ? rates_total - prev_calculated - 1 : 2 * period - 2;
+   if(start_pos < 0) start_pos = 0;
+
    for(int i = start_pos; i < rates_total; i++) {
       if(ema1[i] != EMPTY_VALUE && ema2[i] != EMPTY_VALUE && ema3[i] != EMPTY_VALUE)
          out_series[i] = 3 * ema1[i] - 3 * ema2[i] + ema3[i];
