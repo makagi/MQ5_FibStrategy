@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2024, MetaQuotes Software Corp."
 #property link      "https://www.mql5.com"
-#property version   "13.0"
+#property version   "14.0"
 #property description "Refactored Fibonacci Stochastic Indicator with all fixes and full implementation"
 
 #property indicator_separate_window
@@ -84,23 +84,6 @@ void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int
 void TEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
 void MA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[], ENUM_CUSTOM_MA_METHOD method);
 void CustomStochastic(int k_period, int d_period, int slowing, ENUM_CUSTOM_MA_METHOD ma_method, const int rates_total, const int prev_calculated, const double &high[], const double &low[], const double &close[], double &k_buffer[], double &d_buffer[]);
-
-//+------------------------------------------------------------------+
-//| MA Calculation Router                                            |
-//+------------------------------------------------------------------+
-void MA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[], ENUM_CUSTOM_MA_METHOD method)
-{
-    switch(method)
-    {
-        case CUSTOM_SMA:   SMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_EMA:   EMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_SMMA:  SMMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_LWMA:  LWMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_HMA:   HMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_ZLEMA: ZLEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_TEMA:  TEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-    }
-}
 
 //+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
@@ -383,7 +366,7 @@ int OnCalculate(const int rates_total,
                         if(stochVal > 0.0 && stochVal <= 100.0) sum += stochVal * w;
                      }
                   } else { // Original SumType != 0 (SUM_BACKWARD)
-                     weight_sum = 1.0; // This logic seems different from the snippet, but follows the general idea.
+                     weight_sum = 1.0;
                      for(int j = 0; j <= i; j++) {
                         double stochVal = current_stoch_values[j];
                         if(stochVal > 0.0 && stochVal <= 100.0) sum += stochVal / (i + 1.0);
@@ -423,7 +406,7 @@ int OnCalculate(const int rates_total,
                            sum_of_divs += (stoch_curr - stoch_prev);
                         }
                      }
-                     if (g_buff_num - i > 0)
+                      if (g_buff_num - i > 0)
                         plot_value = sum_of_divs / (g_buff_num - i);
                   }
                   break;
@@ -461,7 +444,37 @@ int OnCalculate(const int rates_total,
 //+------------------------------------------------------------------+
 void SMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
 {
-    SimpleMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, out_series);
+    if(prev_calculated == 0)
+        ArrayInitialize(out_series, EMPTY_VALUE);
+
+    int start_pos = rates_total - 1;
+    if(prev_calculated > 0)
+        start_pos = rates_total - prev_calculated;
+
+    if (start_pos < 0) start_pos = 0;
+
+    for (int i = start_pos; i >= 0; i--)
+    {
+        if (i + period > rates_total) {
+            out_series[i] = EMPTY_VALUE;
+            continue;
+        }
+
+        double sum = 0;
+        int    count = 0;
+        for(int j = 0; j < period; j++) {
+            if(in_series[i + j] != EMPTY_VALUE) {
+                sum += in_series[i + j];
+                count++;
+            }
+        }
+
+        if (count == period) {
+            out_series[i] = sum / period;
+        } else {
+            out_series[i] = EMPTY_VALUE;
+        }
+    }
 }
 
 void EMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
@@ -500,7 +513,9 @@ void HMA_Calculate(const int rates_total, const int prev_calculated, const int p
    LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, half_period, in_series, lwma_half_buffer);
    LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, lwma_full_buffer);
 
-   int start_pos = (prev_calculated > 1) ? rates_total - prev_calculated -1 : 0;
+   int start_pos = (prev_calculated > 1) ? rates_total - prev_calculated - 1 : period - 1;
+   if(start_pos < 0) start_pos = 0;
+
    for(int i = start_pos; i < rates_total; i++) {
       if(lwma_half_buffer[i] != EMPTY_VALUE && lwma_full_buffer[i] != EMPTY_VALUE)
          intermediate_buffer[i] = 2 * lwma_half_buffer[i] - lwma_full_buffer[i];
@@ -520,7 +535,9 @@ void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int
 
     ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, ema_arr);
 
-    int start_pos = (prev_calculated > 1) ? rates_total - prev_calculated -1 : 0;
+    int start_pos = (prev_calculated > 1) ? rates_total - prev_calculated - 1 : period - 1;
+    if(start_pos < 0) start_pos = 0;
+
     for(int i = start_pos; i < rates_total; i++) {
         if (i + lag >= rates_total) {
             out_series[i] = EMPTY_VALUE;
@@ -549,16 +566,32 @@ void TEMA_Calculate(const int rates_total, const int prev_calculated, const int 
    }
 
    ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, ema1);
-   ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, ema1, ema2);
-   ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, ema2, ema3);
+   ExponentialMAOnBuffer(rates_total, prev_calculated, period - 1, period, ema1, ema2);
+   ExponentialMAOnBuffer(rates_total, prev_calculated, 2 * period - 2, period, ema2, ema3);
 
-   int start_pos = (prev_calculated > 1) ? rates_total - prev_calculated -1 : 0;
+   int start_pos = (prev_calculated > 1) ? rates_total - prev_calculated - 1 : 2 * period - 2;
+   if(start_pos < 0) start_pos = 0;
+
    for(int i = start_pos; i < rates_total; i++) {
       if(ema1[i] != EMPTY_VALUE && ema2[i] != EMPTY_VALUE && ema3[i] != EMPTY_VALUE)
          out_series[i] = 3 * ema1[i] - 3 * ema2[i] + ema3[i];
       else
          out_series[i] = EMPTY_VALUE;
    }
+}
+
+void MA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[], ENUM_CUSTOM_MA_METHOD method)
+{
+    switch(method)
+    {
+        case CUSTOM_SMA:   SMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_EMA:   EMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_SMMA:  SMMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_LWMA:  LWMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_HMA:   HMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_ZLEMA: ZLEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_TEMA:  TEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+    }
 }
 
 //+------------------------------------------------------------------+
