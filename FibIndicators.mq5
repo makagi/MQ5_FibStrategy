@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2024, MetaQuotes Software Corp."
 #property link      "https://www.mql5.com"
-#property version   "16.0"
+#property version   "17.0"
 #property description "Refactored Fibonacci Stochastic Indicator with all fixes and full implementation"
 
 #property indicator_separate_window
@@ -76,12 +76,12 @@ int      g_stoch_handles[19];
 
 //--- Forward Declarations for Optimized MA calculations
 void SMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
-void EMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
-void LWMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
-void SMMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
-void HMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
-void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
-void TEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
+void EMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]);
+void LWMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]);
+void SMMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]);
+void HMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]);
+void ZLEMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]);
+void TEMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]);
 void MA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[], ENUM_CUSTOM_MA_METHOD method);
 void CustomStochastic(int k_period, int d_period, int slowing, ENUM_CUSTOM_MA_METHOD ma_method, const int rates_total, const int prev_calculated, const double &high[], const double &low[], const double &close[], double &k_buffer[], double &d_buffer[]);
 
@@ -479,17 +479,17 @@ void SMA_Calculate(const int rates_total, const int prev_calculated, const int p
 
 void EMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
 {
-    iMAOnArray(in_series, 0, period, 0, MODE_EMA, out_series);
+    iMAOnArray(in_series, rates_total, period, 0, MODE_EMA, out_series);
 }
 
 void LWMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
 {
-    iMAOnArray(in_series, 0, period, 0, MODE_LWMA, out_series);
+    iMAOnArray(in_series, rates_total, period, 0, MODE_LWMA, out_series);
 }
 
 void SMMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
 {
-    iMAOnArray(in_series, 0, period, 0, MODE_SMMA, out_series);
+    iMAOnArray(in_series, rates_total, period, 0, MODE_SMMA, out_series);
 }
 
 void HMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]) {
@@ -504,8 +504,8 @@ void HMA_Calculate(const int rates_total, const int prev_calculated, const int p
    ArrayResize(lwma_full_buffer, rates_total);
    ArrayResize(intermediate_buffer, rates_total);
 
-   iMAOnArray(in_series, 0, half_period, 0, MODE_LWMA, lwma_half_buffer);
-   iMAOnArray(in_series, 0, period, 0, MODE_LWMA, lwma_full_buffer);
+   iMAOnArray(in_series, rates_total, half_period, 0, MODE_LWMA, lwma_half_buffer);
+   iMAOnArray(in_series, rates_total, period, 0, MODE_LWMA, lwma_full_buffer);
 
    for(int i = 0; i < rates_total; i++) {
       if(lwma_half_buffer[i] != EMPTY_VALUE && lwma_full_buffer[i] != EMPTY_VALUE)
@@ -514,7 +514,7 @@ void HMA_Calculate(const int rates_total, const int prev_calculated, const int p
          intermediate_buffer[i] = EMPTY_VALUE;
    }
 
-   iMAOnArray(intermediate_buffer, 0, sqrt_period, 0, MODE_LWMA, out_series);
+   iMAOnArray(intermediate_buffer, rates_total, sqrt_period, 0, MODE_LWMA, out_series);
 }
 
 void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]) {
@@ -523,7 +523,7 @@ void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int
     double ema_arr[];
     ArrayResize(ema_arr, rates_total);
 
-    iMAOnArray(in_series, 0, period, 0, MODE_EMA, ema_arr);
+    iMAOnArray(in_series, rates_total, period, 0, MODE_EMA, ema_arr);
 
     for(int i = 0; i < rates_total; i++) {
         if (i + lag >= rates_total) {
@@ -544,9 +544,9 @@ void TEMA_Calculate(const int rates_total, const int prev_calculated, const int 
    ArrayResize(ema2, rates_total);
    ArrayResize(ema3, rates_total);
 
-   iMAOnArray(in_series, 0, period, 0, MODE_EMA, ema1);
-   iMAOnArray(ema1, 0, period, 0, MODE_EMA, ema2);
-   iMAOnArray(ema2, 0, period, 0, MODE_EMA, ema3);
+   iMAOnArray(in_series, rates_total, period, 0, MODE_EMA, ema1);
+   iMAOnArray(ema1, rates_total, period, 0, MODE_EMA, ema2);
+   iMAOnArray(ema2, rates_total, period, 0, MODE_EMA, ema3);
 
    for(int i = 0; i < rates_total; i++) {
       if(ema1[i] != EMPTY_VALUE && ema2[i] != EMPTY_VALUE && ema3[i] != EMPTY_VALUE)
