@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2024, MetaQuotes Software Corp."
 #property link      "https://www.mql5.com"
-#property version   "13.0"
+#property version   "14.0"
 #property description "Refactored Fibonacci Stochastic Indicator with all fixes and full implementation"
 
 #property indicator_separate_window
@@ -84,23 +84,6 @@ void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int
 void TEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
 void MA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[], ENUM_CUSTOM_MA_METHOD method);
 void CustomStochastic(int k_period, int d_period, int slowing, ENUM_CUSTOM_MA_METHOD ma_method, const int rates_total, const int prev_calculated, const double &high[], const double &low[], const double &close[], double &k_buffer[], double &d_buffer[]);
-
-//+------------------------------------------------------------------+
-//| MA Calculation Router                                            |
-//+------------------------------------------------------------------+
-void MA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[], ENUM_CUSTOM_MA_METHOD method)
-{
-    switch(method)
-    {
-        case CUSTOM_SMA:   SMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_EMA:   EMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_SMMA:  SMMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_LWMA:  LWMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_HMA:   HMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_ZLEMA: ZLEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_TEMA:  TEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-    }
-}
 
 //+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
@@ -383,7 +366,7 @@ int OnCalculate(const int rates_total,
                         if(stochVal > 0.0 && stochVal <= 100.0) sum += stochVal * w;
                      }
                   } else { // Original SumType != 0 (SUM_BACKWARD)
-                     weight_sum = 1.0; // This logic seems different from the snippet, but follows the general idea.
+                     weight_sum = 1.0;
                      for(int j = 0; j <= i; j++) {
                         double stochVal = current_stoch_values[j];
                         if(stochVal > 0.0 && stochVal <= 100.0) sum += stochVal / (i + 1.0);
@@ -423,7 +406,7 @@ int OnCalculate(const int rates_total,
                            sum_of_divs += (stoch_curr - stoch_prev);
                         }
                      }
-                     if (g_buff_num - i > 0)
+                      if (g_buff_num - i > 0)
                         plot_value = sum_of_divs / (g_buff_num - i);
                   }
                   break;
@@ -559,6 +542,20 @@ void TEMA_Calculate(const int rates_total, const int prev_calculated, const int 
       else
          out_series[i] = EMPTY_VALUE;
    }
+}
+
+void MA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[], ENUM_CUSTOM_MA_METHOD method)
+{
+    switch(method)
+    {
+        case CUSTOM_SMA:   SMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_EMA:   EMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_SMMA:  SMMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_LWMA:  LWMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_HMA:   HMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_ZLEMA: ZLEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_TEMA:  TEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+    }
 }
 
 //+------------------------------------------------------------------+
