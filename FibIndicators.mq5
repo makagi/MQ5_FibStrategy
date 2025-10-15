@@ -477,22 +477,22 @@ void SMA_Calculate(const int rates_total, const int prev_calculated, const int p
     }
 }
 
-void EMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
+void EMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[])
 {
     iMAOnArray(in_series, rates_total, period, 0, MODE_EMA, out_series);
 }
 
-void LWMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
+void LWMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[])
 {
     iMAOnArray(in_series, rates_total, period, 0, MODE_LWMA, out_series);
 }
 
-void SMMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
+void SMMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[])
 {
     iMAOnArray(in_series, rates_total, period, 0, MODE_SMMA, out_series);
 }
 
-void HMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]) {
+void HMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]) {
    if(period < 2) return;
 
    int half_period = period / 2 > 0 ? period / 2 : 1;
@@ -517,7 +517,7 @@ void HMA_Calculate(const int rates_total, const int prev_calculated, const int p
    iMAOnArray(intermediate_buffer, rates_total, sqrt_period, 0, MODE_LWMA, out_series);
 }
 
-void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]) {
+void ZLEMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]) {
     if(period <= 0) return;
     int lag = (period - 1) / 2;
     double ema_arr[];
@@ -536,7 +536,7 @@ void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int
     }
 }
 
-void TEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]) {
+void TEMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]) {
    if(period < 2) return;
 
    double ema1[], ema2[], ema3[];
@@ -558,15 +558,16 @@ void TEMA_Calculate(const int rates_total, const int prev_calculated, const int 
 
 void MA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[], ENUM_CUSTOM_MA_METHOD method)
 {
+    // The prev_calculated parameter is not used by iMAOnArray, but is kept for the manual SMA_Calculate function
     switch(method)
     {
         case CUSTOM_SMA:   SMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_EMA:   EMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_SMMA:  SMMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_LWMA:  LWMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_HMA:   HMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_ZLEMA: ZLEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_TEMA:  TEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_EMA:   EMA_Calculate(rates_total, period, in_series, out_series); break;
+        case CUSTOM_SMMA:  SMMA_Calculate(rates_total, period, in_series, out_series); break;
+        case CUSTOM_LWMA:  LWMA_Calculate(rates_total, period, in_series, out_series); break;
+        case CUSTOM_HMA:   HMA_Calculate(rates_total, period, in_series, out_series); break;
+        case CUSTOM_ZLEMA: ZLEMA_Calculate(rates_total, period, in_series, out_series); break;
+        case CUSTOM_TEMA:  TEMA_Calculate(rates_total, period, in_series, out_series); break;
     }
 }
 
