@@ -76,10 +76,6 @@ int      g_stoch_handles[19];
 
 
 //--- Forward Declarations for Optimized MA calculations
-void SMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
-void EMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
-void LWMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
-void SMMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
 void HMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
 void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
 void TEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
@@ -253,6 +249,9 @@ int OnCalculate(const int rates_total,
          CopyLow(Symbol(), Period(), 0, rates_total, low) <= 0 ||
          CopyClose(Symbol(), Period(), 0, rates_total, close) <= 0)
          return(0);
+      ArraySetAsSeries(high, true);
+      ArraySetAsSeries(low, true);
+      ArraySetAsSeries(close, true);
      }
 
 //--- Fill stochastic buffers
@@ -443,55 +442,6 @@ int OnCalculate(const int rates_total,
 //+------------------------------------------------------------------+
 //| Optimized MA Implementations                                     |
 //+------------------------------------------------------------------+
-void SMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
-{
-    if(prev_calculated == 0)
-        ArrayInitialize(out_series, EMPTY_VALUE);
-
-    int start_pos = rates_total - 1;
-    if(prev_calculated > 0)
-        start_pos = rates_total - prev_calculated;
-
-    if (start_pos < 0) start_pos = 0;
-
-    for (int i = start_pos; i >= 0; i--)
-    {
-        if (i + period > rates_total) {
-            out_series[i] = EMPTY_VALUE;
-            continue;
-        }
-
-        double sum = 0;
-        int    count = 0;
-        for(int j = 0; j < period; j++) {
-            if(in_series[i + j] != EMPTY_VALUE) {
-                sum += in_series[i + j];
-                count++;
-            }
-        }
-
-        if (count == period) {
-            out_series[i] = sum / period;
-        } else {
-            out_series[i] = EMPTY_VALUE;
-        }
-    }
-}
-
-void EMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
-{
-    ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, out_series);
-}
-
-void LWMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
-{
-    LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, out_series);
-}
-
-void SMMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
-{
-    SmoothedMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, out_series);
-}
 
 void HMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]) {
    if(period < 2) return;
@@ -502,8 +452,11 @@ void HMA_Calculate(const int rates_total, const int prev_calculated, const int p
 
    double lwma_half_buffer[], lwma_full_buffer[], intermediate_buffer[];
    ArrayResize(lwma_half_buffer, rates_total);
+   ArraySetAsSeries(lwma_half_buffer, true);
    ArrayResize(lwma_full_buffer, rates_total);
+   ArraySetAsSeries(lwma_full_buffer, true);
    ArrayResize(intermediate_buffer, rates_total);
+   ArraySetAsSeries(intermediate_buffer, true);
 
    LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, half_period, in_series, lwma_half_buffer);
    LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, lwma_full_buffer);
@@ -523,6 +476,7 @@ void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int
     int lag = (period - 1) / 2;
     double momentum_data[];
     ArrayResize(momentum_data, rates_total);
+    ArraySetAsSeries(momentum_data, true);
 
     // Create a momentum-adjusted series: price + (price - price[lag])
     for(int i = 0; i < rates_total; i++) {
@@ -544,8 +498,11 @@ void TEMA_Calculate(const int rates_total, const int prev_calculated, const int 
 
    double ema1[], ema2[], ema3[];
    ArrayResize(ema1, rates_total);
+   ArraySetAsSeries(ema1, true);
    ArrayResize(ema2, rates_total);
+   ArraySetAsSeries(ema2, true);
    ArrayResize(ema3, rates_total);
+   ArraySetAsSeries(ema3, true);
 
    ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, ema1);
    ExponentialMAOnBuffer(rates_total, 0, 0, period, ema1, ema2);
@@ -564,10 +521,10 @@ void MA_Calculate(const int rates_total, const int prev_calculated, const int pe
     // The prev_calculated parameter is not used by iMAOnArray, but is kept for the manual SMA_Calculate function
     switch(method)
     {
-        case CUSTOM_SMA:   SMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_EMA:   EMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_SMMA:  SMMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_LWMA:  LWMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_SMA:   SimpleMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, out_series); break;
+        case CUSTOM_EMA:   ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, out_series); break;
+        case CUSTOM_SMMA:  SmoothedMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, out_series); break;
+        case CUSTOM_LWMA:  LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, out_series); break;
         case CUSTOM_HMA:   HMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
         case CUSTOM_ZLEMA: ZLEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
         case CUSTOM_TEMA:  TEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
@@ -584,39 +541,40 @@ void CustomStochastic(int k_period, int d_period, int slowing, ENUM_CUSTOM_MA_ME
    if(k_period <= 0 || d_period <= 0) return;
    double stoch_val[];
    ArrayResize(stoch_val, rates_total);
+   ArraySetAsSeries(stoch_val, true);
+   ArraySetAsSeries(k_buffer, true);
+   ArraySetAsSeries(d_buffer, true);
 
    // On first run, initialize the whole array to EMPTY_VALUE
    if(prev_calculated == 0)
       ArrayInitialize(stoch_val, EMPTY_VALUE);
 
    // Determine the starting position for calculation
-   int start_pos = rates_total - 1;
+   int limit;
    if(prev_calculated > 0)
-      start_pos = rates_total - prev_calculated;
-   if(start_pos < 0) start_pos = 0;
+       limit = rates_total - prev_calculated;
+   else
+       limit = rates_total - 1;
 
-   for(int i = start_pos; i >= 0; i--)
+   for(int i = limit; i >= 0; i--)
      {
-      // Ensure there are enough bars for the calculation
-      if (i + k_period > rates_total) {
-          stoch_val[i] = EMPTY_VALUE;
-          continue;
-      }
-
       double hh = high[ArrayMaximum(high, i, k_period)];
       double ll = low[ArrayMinimum(low, i, k_period)];
-      double den = hh - ll;
-      stoch_val[i] = (den != 0) ? 100.0 * (close[i] - ll) / den : 0.0;
+
+      if(hh == ll)
+         stoch_val[i] = 0.0; // or EMPTY_VALUE depending on desired behavior
+      else
+         stoch_val[i] = 100.0 * (close[i] - ll) / (hh - ll);
      }
 
    if(slowing > 1)
      {
-      SMA_Calculate(rates_total, prev_calculated, slowing, stoch_val, k_buffer);
+      SimpleMAOnBuffer(rates_total, prev_calculated, 0, slowing, stoch_val, k_buffer);
      }
    else
      {
       // If not slowing, copy stoch_val directly to k_buffer for the calculated range
-       for(int i = start_pos; i >= 0; i--)
+       for(int i = limit; i >= 0; i--)
          k_buffer[i] = stoch_val[i];
      }
 
