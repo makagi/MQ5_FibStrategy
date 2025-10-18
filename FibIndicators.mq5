@@ -75,15 +75,15 @@ int      g_stoch_handles[19];
 
 
 //--- Forward Declarations for Optimized MA calculations
-void SMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double in_series[], double &out_series[]);
-void EMA_Calculate(const int rates_total, const int period, const double in_series[], double &out_series[]);
-void LWMA_Calculate(const int rates_total, const int period, const double in_series[], double &out_series[]);
-void SMMA_Calculate(const int rates_total, const int period, const double in_series[], double &out_series[]);
-void HMA_Calculate(const int rates_total, const int period, const double in_series[], double &out_series[]);
-void ZLEMA_Calculate(const int rates_total, const int period, const double in_series[], double &out_series[]);
-void TEMA_Calculate(const int rates_total, const int period, const double in_series[], double &out_series[]);
-void MA_Calculate(const int rates_total, const int prev_calculated, const int period, const double in_series[], double &out_series[], ENUM_CUSTOM_MA_METHOD method);
-void CustomStochastic(int k_period, int d_period, int slowing, ENUM_CUSTOM_MA_METHOD ma_method, const int rates_total, const int prev_calculated, const double high[], const double low[], const double close[], double &k_buffer[], double &d_buffer[]);
+void SMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
+void EMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]);
+void LWMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]);
+void SMMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]);
+void HMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]);
+void ZLEMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]);
+void TEMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]);
+void MA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[], ENUM_CUSTOM_MA_METHOD method);
+void CustomStochastic(int k_period, int d_period, int slowing, ENUM_CUSTOM_MA_METHOD ma_method, const int rates_total, const int prev_calculated, const double &high[], const double &low[], const double &close[], double &k_buffer[], double &d_buffer[]);
 
 //+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
@@ -442,7 +442,7 @@ int OnCalculate(const int rates_total,
 //+------------------------------------------------------------------+
 //| Optimized MA Implementations                                     |
 //+------------------------------------------------------------------+
-void SMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double in_series[], double &out_series[])
+void SMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
 {
     if(prev_calculated == 0)
         ArrayInitialize(out_series, EMPTY_VALUE);
@@ -477,22 +477,22 @@ void SMA_Calculate(const int rates_total, const int prev_calculated, const int p
     }
 }
 
-void EMA_Calculate(const int rates_total, const int period, const double in_series[], double &out_series[])
+void EMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[])
 {
     iMAOnArray(in_series, rates_total, period, 0, MODE_EMA, out_series);
 }
 
-void LWMA_Calculate(const int rates_total, const int period, const double in_series[], double &out_series[])
+void LWMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[])
 {
     iMAOnArray(in_series, rates_total, period, 0, MODE_LWMA, out_series);
 }
 
-void SMMA_Calculate(const int rates_total, const int period, const double in_series[], double &out_series[])
+void SMMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[])
 {
     iMAOnArray(in_series, rates_total, period, 0, MODE_SMMA, out_series);
 }
 
-void HMA_Calculate(const int rates_total, const int period, const double in_series[], double &out_series[]) {
+void HMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]) {
    if(period < 2) return;
 
    int half_period = period / 2 > 0 ? period / 2 : 1;
@@ -517,7 +517,7 @@ void HMA_Calculate(const int rates_total, const int period, const double in_seri
    iMAOnArray(intermediate_buffer, rates_total, sqrt_period, 0, MODE_LWMA, out_series);
 }
 
-void ZLEMA_Calculate(const int rates_total, const int period, const double in_series[], double &out_series[]) {
+void ZLEMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]) {
     if(period <= 0) return;
     int lag = (period - 1) / 2;
     double ema_arr[];
@@ -536,7 +536,7 @@ void ZLEMA_Calculate(const int rates_total, const int period, const double in_se
     }
 }
 
-void TEMA_Calculate(const int rates_total, const int period, const double in_series[], double &out_series[]) {
+void TEMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]) {
    if(period < 2) return;
 
    double ema1[], ema2[], ema3[];
@@ -556,7 +556,7 @@ void TEMA_Calculate(const int rates_total, const int period, const double in_ser
    }
 }
 
-void MA_Calculate(const int rates_total, const int prev_calculated, const int period, const double in_series[], double &out_series[], ENUM_CUSTOM_MA_METHOD method)
+void MA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[], ENUM_CUSTOM_MA_METHOD method)
 {
     // The prev_calculated parameter is not used by iMAOnArray, but is kept for the manual SMA_Calculate function
     switch(method)
@@ -575,7 +575,7 @@ void MA_Calculate(const int rates_total, const int prev_calculated, const int pe
 //| Custom Stochastic Calculation                                    |
 //+------------------------------------------------------------------+
 void CustomStochastic(int k_period, int d_period, int slowing, ENUM_CUSTOM_MA_METHOD ma_method,
-                      const int rates_total, const int prev_calculated, const double high[], const double low[], const double close[],
+                      const int rates_total, const int prev_calculated, const double &high[], const double &low[], const double &close[],
                       double &k_buffer[], double &d_buffer[])
   {
    if(k_period <= 0 || d_period <= 0) return;
