@@ -515,7 +515,7 @@ void HMA_Calculate(const int rates_total, const int prev_calculated, const int p
          intermediate_buffer[i] = EMPTY_VALUE;
    }
 
-   LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, sqrt_period, intermediate_buffer, out_series);
+   LinearWeightedMAOnBuffer(rates_total, 0, 0, sqrt_period, intermediate_buffer, out_series);
 }
 
 void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]) {
@@ -534,7 +534,7 @@ void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int
     }
 
     // Calculate EMA on the momentum-adjusted series
-    ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, momentum_data, out_series);
+    ExponentialMAOnBuffer(rates_total, 0, 0, period, momentum_data, out_series);
 }
 
 void TEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]) {
@@ -548,8 +548,8 @@ void TEMA_Calculate(const int rates_total, const int prev_calculated, const int 
    ArrayResize(ema3, rates_total);
 
    ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, ema1);
-   ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, ema1, ema2);
-   ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, ema2, ema3);
+   ExponentialMAOnBuffer(rates_total, 0, 0, period, ema1, ema2);
+   ExponentialMAOnBuffer(rates_total, 0, 0, period, ema2, ema3);
 
    for(int i = 0; i < rates_total; i++) {
       if(ema1[i] != EMPTY_VALUE && ema2[i] != EMPTY_VALUE && ema3[i] != EMPTY_VALUE)
