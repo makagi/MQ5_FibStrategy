@@ -6,6 +6,7 @@
 #property copyright "Copyright 2024, MetaQuotes Software Corp."
 #property link      "https://www.mql5.com"
 #property version   "17.0"
+#include <MovingAverages.mqh>
 #property description "Refactored Fibonacci Stochastic Indicator with all fixes and full implementation"
 
 #property indicator_separate_window
