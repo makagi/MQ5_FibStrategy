@@ -480,17 +480,17 @@ void SMA_Calculate(const int rates_total, const int prev_calculated, const int p
 
 void EMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[])
 {
-    iMAOnArray(in_series, rates_total, period, 0, MODE_EMA, out_series);
+    ExponentialMAOnBuffer(rates_total, 0, period, in_series, out_series);
 }
 
 void LWMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[])
 {
-    iMAOnArray(in_series, rates_total, period, 0, MODE_LWMA, out_series);
+    LinearWeightedMAOnBuffer(rates_total, 0, period, in_series, out_series);
 }
 
 void SMMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[])
 {
-    iMAOnArray(in_series, rates_total, period, 0, MODE_SMMA, out_series);
+    SmoothedMAOnBuffer(rates_total, 0, period, in_series, out_series);
 }
 
 void HMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]) {
@@ -505,8 +505,8 @@ void HMA_Calculate(const int rates_total, const int period, const double &in_ser
    ArrayResize(lwma_full_buffer, rates_total);
    ArrayResize(intermediate_buffer, rates_total);
 
-   iMAOnArray(in_series, rates_total, half_period, 0, MODE_LWMA, lwma_half_buffer);
-   iMAOnArray(in_series, rates_total, period, 0, MODE_LWMA, lwma_full_buffer);
+   LinearWeightedMAOnBuffer(rates_total, 0, half_period, in_series, lwma_half_buffer);
+   LinearWeightedMAOnBuffer(rates_total, 0, period, in_series, lwma_full_buffer);
 
    for(int i = 0; i < rates_total; i++) {
       if(lwma_half_buffer[i] != EMPTY_VALUE && lwma_full_buffer[i] != EMPTY_VALUE)
@@ -515,7 +515,7 @@ void HMA_Calculate(const int rates_total, const int period, const double &in_ser
          intermediate_buffer[i] = EMPTY_VALUE;
    }
 
-   iMAOnArray(intermediate_buffer, rates_total, sqrt_period, 0, MODE_LWMA, out_series);
+   LinearWeightedMAOnBuffer(rates_total, 0, sqrt_period, intermediate_buffer, out_series);
 }
 
 void ZLEMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]) {
@@ -524,7 +524,7 @@ void ZLEMA_Calculate(const int rates_total, const int period, const double &in_s
     double ema_arr[];
     ArrayResize(ema_arr, rates_total);
 
-    iMAOnArray(in_series, rates_total, period, 0, MODE_EMA, ema_arr);
+    ExponentialMAOnBuffer(rates_total, 0, period, in_series, ema_arr);
 
     for(int i = 0; i < rates_total; i++) {
         if (i + lag >= rates_total) {
@@ -545,9 +545,9 @@ void TEMA_Calculate(const int rates_total, const int period, const double &in_se
    ArrayResize(ema2, rates_total);
    ArrayResize(ema3, rates_total);
 
-   iMAOnArray(in_series, rates_total, period, 0, MODE_EMA, ema1);
-   iMAOnArray(ema1, rates_total, period, 0, MODE_EMA, ema2);
-   iMAOnArray(ema2, rates_total, period, 0, MODE_EMA, ema3);
+   ExponentialMAOnBuffer(rates_total, 0, period, in_series, ema1);
+   ExponentialMAOnBuffer(rates_total, 0, period, ema1, ema2);
+   ExponentialMAOnBuffer(rates_total, 0, period, ema2, ema3);
 
    for(int i = 0; i < rates_total; i++) {
       if(ema1[i] != EMPTY_VALUE && ema2[i] != EMPTY_VALUE && ema3[i] != EMPTY_VALUE)
