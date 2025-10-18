@@ -521,23 +521,25 @@ void HMA_Calculate(const int rates_total, const int prev_calculated, const int p
 void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]) {
     if(period <= 0) return;
     int lag = (period - 1) / 2;
-    double ema_arr[];
-    ArrayResize(ema_arr, rates_total);
+    double momentum_data[];
+    ArrayResize(momentum_data, rates_total);
 
-    ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, ema_arr);
-
+    // Create a momentum-adjusted series: price + (price - price[lag])
     for(int i = 0; i < rates_total; i++) {
-        if (i + lag >= rates_total) {
-            out_series[i] = EMPTY_VALUE;
-        } else if (ema_arr[i] != EMPTY_VALUE && in_series[i] != EMPTY_VALUE && ema_arr[i + lag] != EMPTY_VALUE) {
-            out_series[i] = ema_arr[i] + (in_series[i] - ema_arr[i + lag]);
+        if (i + lag < rates_total && in_series[i] != EMPTY_VALUE && in_series[i + lag] != EMPTY_VALUE) {
+            momentum_data[i] = in_series[i] + (in_series[i] - in_series[i + lag]);
         } else {
-            out_series[i] = EMPTY_VALUE;
+            momentum_data[i] = EMPTY_VALUE;
         }
     }
+
+    // Calculate EMA on the momentum-adjusted series
+    ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, momentum_data, out_series);
 }
 
 void TEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]) {
+   // TEMA requires a longer warm-up period due to triple smoothing (EMA of EMA of EMA).
+   // The significant initial lag before the indicator appears is expected behavior.
    if(period < 2) return;
 
    double ema1[], ema2[], ema3[];
