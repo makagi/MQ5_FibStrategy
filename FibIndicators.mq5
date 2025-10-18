@@ -77,12 +77,12 @@ int      g_stoch_handles[19];
 
 //--- Forward Declarations for Optimized MA calculations
 void SMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
-void EMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]);
-void LWMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]);
-void SMMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]);
-void HMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]);
-void ZLEMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]);
-void TEMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]);
+void EMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
+void LWMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
+void SMMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
+void HMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
+void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
+void TEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]);
 void MA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[], ENUM_CUSTOM_MA_METHOD method);
 void CustomStochastic(int k_period, int d_period, int slowing, ENUM_CUSTOM_MA_METHOD ma_method, const int rates_total, const int prev_calculated, const double &high[], const double &low[], const double &close[], double &k_buffer[], double &d_buffer[]);
 
@@ -478,22 +478,22 @@ void SMA_Calculate(const int rates_total, const int prev_calculated, const int p
     }
 }
 
-void EMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[])
+void EMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
 {
-    ExponentialMAOnBuffer(rates_total, 0, period, in_series, out_series);
+    ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, out_series);
 }
 
-void LWMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[])
+void LWMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
 {
-    LinearWeightedMAOnBuffer(rates_total, 0, period, in_series, out_series);
+    LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, out_series);
 }
 
-void SMMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[])
+void SMMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[])
 {
-    SmoothedMAOnBuffer(rates_total, 0, period, in_series, out_series);
+    SmoothedMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, out_series);
 }
 
-void HMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]) {
+void HMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]) {
    if(period < 2) return;
 
    int half_period = period / 2 > 0 ? period / 2 : 1;
@@ -505,8 +505,8 @@ void HMA_Calculate(const int rates_total, const int period, const double &in_ser
    ArrayResize(lwma_full_buffer, rates_total);
    ArrayResize(intermediate_buffer, rates_total);
 
-   LinearWeightedMAOnBuffer(rates_total, 0, half_period, in_series, lwma_half_buffer);
-   LinearWeightedMAOnBuffer(rates_total, 0, period, in_series, lwma_full_buffer);
+   LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, half_period, in_series, lwma_half_buffer);
+   LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, lwma_full_buffer);
 
    for(int i = 0; i < rates_total; i++) {
       if(lwma_half_buffer[i] != EMPTY_VALUE && lwma_full_buffer[i] != EMPTY_VALUE)
@@ -515,16 +515,16 @@ void HMA_Calculate(const int rates_total, const int period, const double &in_ser
          intermediate_buffer[i] = EMPTY_VALUE;
    }
 
-   LinearWeightedMAOnBuffer(rates_total, 0, sqrt_period, intermediate_buffer, out_series);
+   LinearWeightedMAOnBuffer(rates_total, prev_calculated, 0, sqrt_period, intermediate_buffer, out_series);
 }
 
-void ZLEMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]) {
+void ZLEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]) {
     if(period <= 0) return;
     int lag = (period - 1) / 2;
     double ema_arr[];
     ArrayResize(ema_arr, rates_total);
 
-    ExponentialMAOnBuffer(rates_total, 0, period, in_series, ema_arr);
+    ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, ema_arr);
 
     for(int i = 0; i < rates_total; i++) {
         if (i + lag >= rates_total) {
@@ -537,7 +537,7 @@ void ZLEMA_Calculate(const int rates_total, const int period, const double &in_s
     }
 }
 
-void TEMA_Calculate(const int rates_total, const int period, const double &in_series[], double &out_series[]) {
+void TEMA_Calculate(const int rates_total, const int prev_calculated, const int period, const double &in_series[], double &out_series[]) {
    if(period < 2) return;
 
    double ema1[], ema2[], ema3[];
@@ -545,9 +545,9 @@ void TEMA_Calculate(const int rates_total, const int period, const double &in_se
    ArrayResize(ema2, rates_total);
    ArrayResize(ema3, rates_total);
 
-   ExponentialMAOnBuffer(rates_total, 0, period, in_series, ema1);
-   ExponentialMAOnBuffer(rates_total, 0, period, ema1, ema2);
-   ExponentialMAOnBuffer(rates_total, 0, period, ema2, ema3);
+   ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, in_series, ema1);
+   ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, ema1, ema2);
+   ExponentialMAOnBuffer(rates_total, prev_calculated, 0, period, ema2, ema3);
 
    for(int i = 0; i < rates_total; i++) {
       if(ema1[i] != EMPTY_VALUE && ema2[i] != EMPTY_VALUE && ema3[i] != EMPTY_VALUE)
@@ -563,12 +563,12 @@ void MA_Calculate(const int rates_total, const int prev_calculated, const int pe
     switch(method)
     {
         case CUSTOM_SMA:   SMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
-        case CUSTOM_EMA:   EMA_Calculate(rates_total, period, in_series, out_series); break;
-        case CUSTOM_SMMA:  SMMA_Calculate(rates_total, period, in_series, out_series); break;
-        case CUSTOM_LWMA:  LWMA_Calculate(rates_total, period, in_series, out_series); break;
-        case CUSTOM_HMA:   HMA_Calculate(rates_total, period, in_series, out_series); break;
-        case CUSTOM_ZLEMA: ZLEMA_Calculate(rates_total, period, in_series, out_series); break;
-        case CUSTOM_TEMA:  TEMA_Calculate(rates_total, period, in_series, out_series); break;
+        case CUSTOM_EMA:   EMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_SMMA:  SMMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_LWMA:  LWMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_HMA:   HMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_ZLEMA: ZLEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
+        case CUSTOM_TEMA:  TEMA_Calculate(rates_total, prev_calculated, period, in_series, out_series); break;
     }
 }
 
